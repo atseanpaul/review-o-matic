@@ -2,14 +2,19 @@
 
 import argparse
 import collections
+import difflib
 import enum
 import re
 import subprocess
 import sys
 
 class Type(enum.Enum):
-  FILE_OLD = '--- '
-  FILE_NEW = '\+\+\+ '
+  GITDIFF = 'diff --git '
+  INDEX = 'index '
+  DELETED = 'deleted '
+  ADDED = 'new file mode '
+  FILE_OLD = '--- (?:a/)?(.*)'
+  FILE_NEW = '\+\+\+ (?:b/)?(.*)'
   CHUNK = '@@ '
   DIFF = '[+-]'
 
@@ -23,6 +28,24 @@ def classify_line(line):
   for t in Type:
     if re.match(t.value, line):
       return t
+  return None
+
+def strip_kruft(diff):
+  ret = []
+  ignore = [Type.CHUNK, Type.GITDIFF, Type.INDEX, Type.DELETED, Type.ADDED]
+  include = [Type.FILE_NEW, Type.FILE_OLD, Type.DIFF]
+  for l in diff:
+    if not l:
+      continue
+
+    l_type = classify_line(l)
+    if not l_type:
+      raise ValueError('Could not classify line "%s"' % l)
+    elif l_type in ignore:
+      continue
+    elif l_type in include:
+      ret.append(l)
+  return ret
 
 def review_change(commit, verbose, chatty):
   message = subprocess.check_output(['git', 'log', '-1', commit])
@@ -45,31 +68,14 @@ def review_change(commit, verbose, chatty):
   # strip the commit messages
   local = strip_commit_msg(local)
   remote = strip_commit_msg(remote)
+  local = strip_kruft(local)
+  remote = strip_kruft(remote)
 
-  # Compare the diffs line-by-line
   ret = 0
-  ptrs = collections.defaultdict(dict)
-  for l, r in zip(local, remote):
-    l_type = classify_line(l)
-    r_type = classify_line(r)
-
-    if chatty:
-      print('%s - %s' % (l_type, l))
-      print('%s - %s' % (r_type, r))
-
-    if l_type != r_type:
-      print('  Oh boy! Found mismatched line type:')
-      print('    --loc: %s' % l)
-      print('    --rem: %s' % r)
-      ret = 1
-      continue
-
-    if l_type == Type.DIFF and l != r:
-      print('  Ruh-roh! Found code mismatch:')
-      print('  --loc: %s' % l)
-      print('  --rem: %s' % r)
-      ret = 2
-
+  diff = difflib.unified_diff(local, remote, n=0)
+  for l in diff:
+    ret += 1
+    print(l)
   return ret
 
 def main():
