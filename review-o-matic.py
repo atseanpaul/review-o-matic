@@ -76,7 +76,7 @@ def review_change(commit, verbose, chatty):
   remote = strip_kruft(remote, chatty)
 
   ret = 0
-  diff = difflib.unified_diff(local, remote, n=0)
+  diff = difflib.unified_diff(remote, local, n=0)
   for l in diff:
     ret += 1
     print(l)
