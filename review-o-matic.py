@@ -30,7 +30,7 @@ def classify_line(line):
       return t
   return None
 
-def strip_kruft(diff):
+def strip_kruft(diff, chatty):
   ret = []
   ignore = [Type.CHUNK, Type.GITDIFF, Type.INDEX, Type.DELETED, Type.ADDED]
   include = [Type.FILE_NEW, Type.FILE_OLD, Type.DIFF]
@@ -39,6 +39,10 @@ def strip_kruft(diff):
       continue
 
     l_type = classify_line(l)
+
+    if chatty:
+      print('%s- "%s"' % (l_type, l))
+
     if not l_type:
       raise ValueError('Could not classify line "%s"' % l)
     elif l_type in ignore:
@@ -68,8 +72,8 @@ def review_change(commit, verbose, chatty):
   # strip the commit messages
   local = strip_commit_msg(local)
   remote = strip_commit_msg(remote)
-  local = strip_kruft(local)
-  remote = strip_kruft(remote)
+  local = strip_kruft(local, chatty)
+  remote = strip_kruft(remote, chatty)
 
   ret = 0
   diff = difflib.unified_diff(local, remote, n=0)
@@ -82,6 +86,7 @@ def main():
   parser = argparse.ArgumentParser(description='Auto review UPSTREAM patches')
   parser.add_argument('--start', help='commit hash to start from',
                       required=True)
+  parser.add_argument('--prefix', default='UPSTREAM', help='subject prefix')
   parser.add_argument('--verbose', help='print commits', action='store_true')
   parser.add_argument('--chatty', help='print diffs', action='store_true')
   args = parser.parse_args()
@@ -89,7 +94,7 @@ def main():
   proc = subprocess.check_output(
           ['git', 'log', '--oneline', '%s^..' % args.start])
 
-  regex = re.compile('([0-9a-f]*) UPSTREAM: ', flags=re.I)
+  regex = re.compile('([0-9a-f]*) (%s): ' % (args.prefix), flags=re.I)
   ret = 0
   for l in proc.decode('UTF-8').split('\n'):
     m = regex.match(l)
