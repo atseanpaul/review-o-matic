@@ -17,6 +17,8 @@ class Type(enum.Enum):
   FILE_NEW = '\+\+\+ (?:b/)?(.*)'
   CHUNK = '@@ '
   DIFF = '[+-]'
+  SIMILARITY = 'similarity index ([0-9]+)%'
+  RENAME = 'rename (from|to) (.*)'
 
 def strip_commit_msg(patch):
   regex = re.compile('diff --git ')
@@ -32,7 +34,8 @@ def classify_line(line):
 
 def strip_kruft(diff, chatty):
   ret = []
-  ignore = [Type.CHUNK, Type.GITDIFF, Type.INDEX, Type.DELETED, Type.ADDED]
+  ignore = [Type.CHUNK, Type.GITDIFF, Type.INDEX, Type.DELETED, Type.ADDED,
+            Type.SIMILARITY, Type.RENAME]
   include = [Type.FILE_NEW, Type.FILE_OLD, Type.DIFF]
   for l in diff:
     if not l:
@@ -44,7 +47,7 @@ def strip_kruft(diff, chatty):
       print('%s- "%s"' % (l_type, l))
 
     if not l_type:
-      raise ValueError('Could not classify line "%s"' % l)
+      sys.stderr.write('ERROR: Could not classify line "%s"\n' % l)
     elif l_type in ignore:
       continue
     elif l_type in include:
