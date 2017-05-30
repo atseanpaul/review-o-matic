@@ -127,7 +127,7 @@ def main():
 
     while True:
       sys.stdout.write('\rSleeping...                                        ')
-      time.sleep(3)
+      time.sleep(120)
       if s.detect_change():
         break
 
