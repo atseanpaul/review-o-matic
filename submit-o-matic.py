@@ -28,6 +28,15 @@ class GerritChange(object):
     return not self.is_merged() and (not self.reviewed or not self.verified
                                      or not self.ready)
 
+  def mark_reviewed(self):
+    subprocess.check_output(['gerrit', 'review', self.cid , '2'])
+
+  def mark_verified(self):
+    subprocess.check_output(['gerrit', 'verify', self.cid , '1'])
+
+  def mark_ready(self):
+    subprocess.check_output(['gerrit', 'ready', self.cid , '1'])
+
   def update(self):
     if self.is_merged():
       return
@@ -57,8 +66,14 @@ class GerritChange(object):
 
 
 class Submitter(object):
-  def __init__(self, cid_filename):
-    self.max_ready = 100
+  def __init__(self, cid_filename, review, verify, ready):
+    self.review = review
+    self.verify = verify
+    self.ready = ready
+
+    self.max_in_flight = 50
+    self.in_flight = []
+
     self.changes = []
     with open(cid_filename, 'r') as f:
       for cid in f.read().splitlines():
@@ -68,46 +83,54 @@ class Submitter(object):
   def num_changes(self):
     return len(self.changes)
 
-  def submit_changes(self):
-    review = []
-    verify = []
-    ready = []
+  def num_in_flight(self):
+    return len(self.in_flight)
 
+  def review_changes(self):
+    for i,c in enumerate(self.changes):
+      sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
+      c.update()
+      if c.is_merged():
+        continue
+      if self.review and not c.reviewed:
+        c.mark_reviewed()
+      if self.verify and not c.verified:
+        c.mark_verified()
+
+  def submit_changes(self):
+    self.in_flight = []
     merged = 0
     for i,c in enumerate(self.changes):
-      sys.stdout.write('\rRunning submitter (%d/%d)' % (i, self.num_changes()))
+      if self.num_in_flight() >= self.max_in_flight:
+        break
 
+      sys.stdout.write('\rRunning submitter (%d/%d)' % (i, self.num_changes()))
       c.update()
       if c.is_merged():
         merged += 1
         continue
 
-      if not c.reviewed:
-        review.append(str(c.cnum))
-      if not c.verified:
-        verify.append(str(c.cnum))
-      if not c.ready and len(ready) < self.max_ready:
-        ready.append(str(c.cnum))
+      if self.review and not c.reviewed:
+        c.mark_reviewed()
+      if self.verify and not c.verified:
+        c.mark_verified()
+      if self.ready and not c.ready:
+        c.mark_ready()
+
+      self.in_flight.append(c)
+
 
     sys.stdout.write('\r%d Changes:                    \n' % self.num_changes())
     sys.stdout.write('-- %d merged\n' %  merged)
-    sys.stdout.write('-- %d marked reviewed\n' % len(review))
-    sys.stdout.write('-- %d marked verified\n' % len(verify))
-    sys.stdout.write('-- %d marked ready\n' % len(ready))
-
-    if len(review):
-      proc = subprocess.check_output(['gerrit', 'review'] + review + ['2'])
-    if len(verify):
-      proc = subprocess.check_output(['gerrit', 'verify'] + verify + ['1'])
-    if len(ready):
-      proc = subprocess.check_output(['gerrit', 'ready'] + ready + ['1'])
+    sys.stdout.write('-- %d in flight\n' %  self.num_in_flight())
 
   def detect_change(self):
-    for i,c in enumerate(self.changes):
-      sys.stdout.write('\rDetecting changes (%d/%d)' % (i, self.num_changes()))
-      c.update()
-      if c.needs_action():
-        return True
+    c = self.in_flight[0]
+    sys.stdout.write('\rDetecting change (%d - %s)' % (c.cnum, c.cid))
+    c.update()
+    if c.is_merged() or c.needs_action():
+      return True
+
     return False
 
 
@@ -117,19 +140,31 @@ def main():
     help='Path to file with gerrit change-ids (line delimited, in asc order)')
   parser.add_argument('--daemon', action='store_true',
     help='Run in daemon mode, continuously update changes until merged')
+  parser.add_argument('--no-review', action='store_false', dest='review',
+    default=True, help='Don\'t mark changes as reviewed')
+  parser.add_argument('--no-verify', action='store_false', dest='verify',
+    default=True, help='Don\'t mark changes as verified')
+  parser.add_argument('--no-ready', action='store_false', dest='ready',
+    default=True, help='Don\'t mark changes as ready')
   args = parser.parse_args()
 
-  s = Submitter(args.cid_file)
+  s = Submitter(args.cid_file, args.review, args.verify, args.ready)
+  first_pass = True
   while True:
     s.submit_changes()
+
+    if first_pass:
+      s.review_changes()
+
+    first_pass = False
     if not args.daemon:
       break
 
     while True:
       sys.stdout.write('\rSleeping...                                        ')
-      time.sleep(120)
       if s.detect_change():
         break
+      time.sleep(60)
 
 if __name__ == '__main__':
   sys.exit(main())
