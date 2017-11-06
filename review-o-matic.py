@@ -61,16 +61,18 @@ def review_change(commit, verbose, chatty):
   if not m:
     sys.stderr.write('Could not find cherry-pick in commit message:\n')
     sys.stderr.buffer.write(message)
-    raise ValueError('Could not find cherry-pick in commit message')
+    return 1
   upstrm = m.group(1)
 
+  cmd = ['git', 'log', '--oneline', '{c}^..{c}'.format(c=commit)]
+  oneline = subprocess.check_output(cmd).decode('UTF-8').rstrip()
 
   cmd = ['git', 'show', '--minimal', '-U0', r'--format=%B']
   local = subprocess.check_output(cmd + [commit]).decode('UTF-8').split('\n')
   remote = subprocess.check_output(cmd + [upstrm]).decode('UTF-8').split('\n')
 
   if verbose or chatty:
-    print('Reviewing local(%s) remote(%s)' % (commit, upstrm))
+    print('Reviewing %s (rmt=%s)' % (oneline, upstrm[:11]))
 
   # strip the commit messages
   local = strip_commit_msg(local)
@@ -99,10 +101,15 @@ def main():
 
   regex = re.compile('([0-9a-f]*) (%s): ' % (args.prefix), flags=re.I)
   ret = 0
-  for l in proc.decode('UTF-8').split('\n'):
+  for l in reversed(proc.decode('UTF-8').split('\n')):
+    this_ret = 0
     m = regex.match(l)
     if m:
-      ret |= review_change(m.group(1), args.verbose, args.chatty)
+      this_ret = review_change(m.group(1), args.verbose, args.chatty)
+    if this_ret and (args.verbose or args.chatty):
+      print('')
+    ret += this_ret
+
   return ret
 
 if __name__ == '__main__':
