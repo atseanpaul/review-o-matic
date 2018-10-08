@@ -37,6 +37,13 @@ class GerritChange(object):
   def mark_ready(self):
     subprocess.check_output(['gerrit', 'ready', self.cid , '1'])
 
+  def get_deps(self):
+    raw = subprocess.check_output(['gerrit', '--raw', 'deps', self.cid]).decode('UTF-8')
+    ret = []
+    for l in raw.splitlines():
+      ret.append(l)
+    return ret
+
   def update(self):
     if self.is_merged():
       return
@@ -66,7 +73,7 @@ class GerritChange(object):
 
 
 class Submitter(object):
-  def __init__(self, cid_filename, review, verify, ready):
+  def __init__(self, cid_filename, last_cid, review, verify, ready):
     self.review = review
     self.verify = verify
     self.ready = ready
@@ -75,10 +82,19 @@ class Submitter(object):
     self.in_flight = []
 
     self.changes = []
-    with open(cid_filename, 'r') as f:
-      for cid in f.read().splitlines():
-        c = GerritChange(cid)
+    if cid_filename != None:
+      with open(cid_filename, 'r') as f:
+        for cid in f.read().splitlines():
+          c = GerritChange(cid)
+          self.changes.append(c)
+
+    if last_cid != None:
+      c = GerritChange(last_cid)
+      deps = c.get_deps()
+      for d in reversed(deps):
+        c = GerritChange(d)
         self.changes.append(c)
+
 
   def num_changes(self):
     return len(self.changes)
@@ -136,8 +152,10 @@ class Submitter(object):
 
 def main():
   parser = argparse.ArgumentParser(description='Auto review/submit gerrit cls')
-  parser.add_argument('--cid_file', required=True,
+  parser.add_argument('--cid_file', default=None,
     help='Path to file with gerrit change-ids (line delimited, in asc order)')
+  parser.add_argument('--last_cid', default=None,
+    help='Gerrit change-id of last patch in set')
   parser.add_argument('--daemon', action='store_true',
     help='Run in daemon mode, continuously update changes until merged')
   parser.add_argument('--no-review', action='store_false', dest='review',
@@ -148,7 +166,10 @@ def main():
     default=True, help='Don\'t mark changes as ready')
   args = parser.parse_args()
 
-  s = Submitter(args.cid_file, args.review, args.verify, args.ready)
+  if args.cid_file == None and args.last_cid == None:
+    raise ValueError('You must specify either cid_file or last_cid')
+
+  s = Submitter(args.cid_file, args.last_cid, args.review, args.verify, args.ready)
   first_pass = True
   while True:
     s.submit_changes()
