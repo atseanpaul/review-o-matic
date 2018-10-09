@@ -141,6 +141,9 @@ class Submitter(object):
     sys.stdout.write('-- %d in flight\n' %  self.num_in_flight())
 
   def detect_change(self):
+    if self.num_in_flight() == 0: # everything is merged, so no detection needed
+      return True
+
     c = self.in_flight[0]
     sys.stdout.write('\rDetecting change (%d - %s)' % (c.cnum, c.cid))
     c.update()
@@ -173,6 +176,9 @@ def main():
   first_pass = True
   while True:
     s.submit_changes()
+    if s.num_in_flight() == 0:
+      sys.stdout.write('\n\nCongratulations, your changes have landed!\n\n')
+      return True
 
     if first_pass:
       s.review_changes()
