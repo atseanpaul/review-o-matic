@@ -71,8 +71,8 @@ def review_change(commit, verbose, chatty):
   local = subprocess.check_output(cmd + [commit]).decode('UTF-8').split('\n')
   remote = subprocess.check_output(cmd + [upstrm]).decode('UTF-8').split('\n')
 
-  if verbose or chatty:
-    print('Reviewing %s (rmt=%s)' % (oneline, upstrm[:11]))
+  status = 'Reviewing %s (rmt=%s)' % (oneline, upstrm[:11])
+  status_printed = False
 
   # strip the commit messages
   local = strip_commit_msg(local)
@@ -82,9 +82,22 @@ def review_change(commit, verbose, chatty):
 
   ret = 0
   diff = difflib.unified_diff(remote, local, n=0)
+
+  if verbose or chatty:
+    print(status)
+    status_printed = True
+
   for l in diff:
+    if not status_printed:
+      print(status)
+      status_printed = True
     ret += 1
     print(l)
+
+  if ret:
+    print('')
+    print('')
+
   return ret
 
 def main():

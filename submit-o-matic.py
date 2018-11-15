@@ -35,6 +35,7 @@ class GerritChange(object):
     subprocess.check_output(['gerrit', 'verify', self.cid , '1'])
 
   def mark_ready(self):
+    subprocess.check_output(['gerrit', 'trybotready', self.cid , '1'])
     subprocess.check_output(['gerrit', 'ready', self.cid , '1'])
 
   def get_deps(self):
@@ -78,7 +79,7 @@ class Submitter(object):
     self.verify = verify
     self.ready = ready
 
-    self.max_in_flight = 50
+    self.max_in_flight = 100 # 50 for the cq, 50 for the pre-cq
     self.in_flight = []
 
     self.changes = []
@@ -136,7 +137,8 @@ class Submitter(object):
       self.in_flight.append(c)
 
 
-    sys.stdout.write('\r%d Changes:                    \n' % self.num_changes())
+    sys.stdout.write('\r%d Changes:                                       \n' %
+                     self.num_changes())
     sys.stdout.write('-- %d merged\n' %  merged)
     sys.stdout.write('-- %d in flight\n' %  self.num_in_flight())
 

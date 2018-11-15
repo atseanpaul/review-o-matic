@@ -180,7 +180,8 @@ def output_processed_msg(args, msg):
   # Add cros prefix to subject
   subj_line,_ = find_line(msg, lambda m: m.type == LineType.SUBJECT)
   if subj_line != None:
-    msg[subj_line].cros_tag = args.prefix
+    if not msg[subj_line].cros_tag or not args.preserve_tags:
+      msg[subj_line].cros_tag = args.prefix
 
   # Insert AM_FROM either in-place or below CHERRY_PICK
   if args.tree:
@@ -253,6 +254,8 @@ def main():
   parser.add_argument('--bug', help='BUG= value', default='None')
   parser.add_argument('--test', help='TEST= value', default='None')
   parser.add_argument('--sob', help='"Name <email>" for SoB', default=None)
+  parser.add_argument('--no-preserve-tags', help='Overwrite existing CrOS tags',
+                      dest='preserve_tags', action='store_false', default=True)
   args = parser.parse_args()
 
   if 'FROMGIT' in args.prefix and not args.tree:
