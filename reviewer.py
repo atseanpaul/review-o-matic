@@ -64,10 +64,11 @@ class Reviewer(object):
 
   def get_cherry_pick_sha_from_patch(self, patch):
     regex = re.compile('\(cherry.picked from commit ([0-9a-f]*)', flags=re.I)
-    m = regex.search(patch)
-    if not m:
+    m = regex.findall(patch)
+    if not m or not len(m):
       return None
-    return m.group(1)
+    # Use the last SHA found in the patch, since it's (probably) most recent
+    return m[-1]
 
   def get_cherry_pick_sha_from_local_sha(self, local_sha):
     commit_message = subprocess.check_output(['git', 'log', '-1', local_sha]).decode('UTF-8')
