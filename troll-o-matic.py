@@ -28,7 +28,7 @@ class Troll(object):
       This change has been certified {} by review-o-matic!
       Details available at https://github.com/atseanpaul/review-o-matic
     '''.format(random.choice(self.swag))
-    self.gerrit.review(change, self.tag, msg, 1, True)
+    self.gerrit.review(change, self.tag, msg, True, vote_code_review=1)
 
 
   def handle_unsuccessful_review(self, change, prefix, result):
@@ -74,11 +74,11 @@ class Troll(object):
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
 
-    self.gerrit.review(change, self.tag, msg, vote, notify)
+    self.gerrit.review(change, self.tag, msg, notify, vote)
 
 
-  def get_changes(self, prefix):
-    message = '{}: drm'.format(prefix)
+  def get_changes(self, prefix, subsystem):
+    message = '{}: {}'.format(prefix, subsystem)
     after = datetime.date.today() - datetime.timedelta(days=30)
     changes = self.gerrit.query_changes(status='open', message=message,
                                         after=after)
@@ -143,11 +143,13 @@ class Troll(object):
 
   def run(self):
     prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
+    subsystems = ['drm', 'gpu', 'msm', 'dt-bindings']
     for p in prefixes:
-      changes = self.get_changes(p)
-      if self.args.verbose:
-        print('{} changes for prefix {}'.format(len(changes), p))
-      self.process_changes(p, changes)
+      for s in subsystems:
+        changes = self.get_changes(p,s )
+        if self.args.verbose:
+          print('{} changes for prefix {}'.format(len(changes), p))
+        self.process_changes(p, changes)
 
 
 def main():

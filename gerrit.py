@@ -1,40 +1,79 @@
+from datetime import datetime
 import json
 from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
+import pprint
 import urllib
 
 class GerritMessage(object):
-  def __init__(self, from_rest):
+  def __init__(self, rest):
     # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-message-info
-    self.id = from_rest['id']
-    self.revision_num = from_rest['_revision_number']
-    self.tag = from_rest.get('tag')
-    self.message = from_rest['message']
+    self.id = rest['id']
+    self.revision_num = rest['_revision_number']
+    self.tag = rest.get('tag')
+    self.message = rest['message']
 
 class GerritRevision(object):
-  def __init__(self, id, from_rest):
+  def __init__(self, id, rest):
     # http://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#revision-info
     self.id = id
-    self.ref = from_rest['ref']
-    self.number = from_rest['_number']
+    self.ref = rest['ref']
+    self.number = rest['_number']
 
 class GerritChange(object):
-  def __init__(self, url, from_rest):
+  def __init__(self, url, rest):
     # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-info
     self.base_url = url
-    self.id = from_rest['id']
-    self.change_id = from_rest['change_id']
-    self.number = from_rest['_number']
-    self.subject = from_rest['subject']
-    self.project = from_rest['project']
+    self.id = rest['id']
+    self.change_id = rest['change_id']
+    self.number = rest['_number']
+    # yyyy-mm-dd hh:mm:ss.fffffffff
+    self.last_updated = datetime.strptime(rest['updated'][:-10],
+                                          '%Y-%m-%d %H:%M:%S')
+    self.status = rest['status']
+    self.subject = rest['subject']
+    self.project = rest['project']
     self.current_revision = GerritRevision(
-            from_rest['current_revision'],
-            from_rest['revisions'][from_rest['current_revision']])
+            rest['current_revision'],
+            rest['revisions'][rest['current_revision']])
     self.messages = []
-    for m in from_rest['messages']:
+    for m in rest['messages']:
       self.messages.append(GerritMessage(m))
+
+    self.vote_code_review = []
+    self.__parse_votes(rest, self.vote_code_review, 'Code-Review')
+    self.vote_commit_queue = []
+    self.__parse_votes(rest, self.vote_commit_queue, 'Commit-Queue')
+    self.vote_trybot_ready = []
+    self.__parse_votes(rest, self.vote_trybot_ready, 'Trybot-Ready')
+    self.vote_verified = []
+    self.__parse_votes(rest, self.vote_verified, 'Verified')
+
+    #pprint.PrettyPrinter(indent=4).pprint(rest)
+
+  def __parse_votes(self, rest, array, label):
+    for l in rest['labels'][label]['all']:
+      value = l.get('value')
+      if value:
+        array.append(value)
 
   def url(self):
     return '{}/c/{}/+/{}'.format(self.base_url, self.project, self.number)
+
+  def is_merged(self):
+    return self.status == 'MERGED'
+
+  def is_reviewed(self):
+    return 2 in self.vote_code_review
+
+  def is_verified(self):
+    return 1 in self.vote_verified
+
+  def is_cq_ready(self):
+    return 1 in self.vote_commit_queue
+
+  def is_trybot_ready(self):
+    return 1 in self.vote_trybot_ready
+
 
 class Gerrit(object):
   def __init__(self, url):
@@ -42,7 +81,24 @@ class Gerrit(object):
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
 
-  def query_changes(self, status=None, message=None, after=None, age_days=None):
+  def get_change(self, change_id=None, change_num=None):
+    ret = self.query_changes(change_id=change_id, change_num=change_num)
+    if (len(ret) == 0):
+      return None
+    elif (len(ret) > 1):
+      raise ValueError('More than one change returned for query ({}/{})'.format(
+                          change_id, change_num))
+    return ret[0]
+
+  def get_related_changes(self, change):
+    uri = '/changes/{}/revisions/current/related'.format(change.id)
+    changes = []
+    for c in self.rest.get(uri)['changes']:
+      changes.append(self.get_change(c['change_id']))
+    return changes
+
+  def query_changes(self, status=None, message=None, after=None, age_days=None,
+                    change_id=None, change_num=None):
     query = []
     if message:
       query.append('message:"{}"'.format(urllib.parse.quote(message)))
@@ -52,8 +108,13 @@ class Gerrit(object):
       query.append('after:"{}"'.format(after.isoformat()))
     if age_days:
       query.append('age:{}d'.format(age_days))
+    if change_id:
+      query.append('change:{}'.format(change_id))
+    if change_num:
+      query.append('change:{}'.format(change_num))
 
-    options = ['CURRENT_REVISION', 'MESSAGES']
+
+    options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS']
 
     uri = '/changes/?q={}&o={}'.format('+'.join(query),'&o='.join(options))
     changes = []
@@ -70,14 +131,21 @@ class Gerrit(object):
     uri = '/changes/{}/messages'.format(change.id)
     return self.rest.get(uri)
 
-  def review(self, change, tag, message, review_vote, notify_owner):
+  def review(self, change, tag, message, notify_owner, vote_code_review=None,
+             vote_verified=None, vote_cq_ready=None, vote_trybot_ready=None):
     review = {
         'tag': tag,
         'message': message,
         'notify': 'OWNER' if notify_owner else 'NONE',
     }
-    if review_vote:
-        review['labels'] = { 'Code-Review': review_vote }
+    if vote_code_review:
+        review['labels'] = { 'Code-Review': vote_code_review }
+    if vote_verified:
+        review['labels'] = { 'Verified': vote_verified }
+    if vote_cq_ready:
+        review['labels'] = { 'Commit-Queue': vote_cq_ready }
+    if vote_trybot_ready:
+        review['labels'] = { 'Trybot-Ready': vote_trybot_ready }
     return self.rest.review(change.id, change.current_revision.id,
                             json.dumps(review))
 
