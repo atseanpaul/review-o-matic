@@ -27,9 +27,10 @@ class Submitter(object):
     self.changes.reverse()
 
   def change_needs_action(self, change):
-    return not change.is_merged() and (
-                not change.is_reviewed() or not self.isverified() or \
-                not self.is_cq_ready())
+    return change.is_merged() or \
+           (self.vote_review and not change.is_reviewed()) or \
+           (self.vote_verify and not change.is_verified()) or \
+           (self.vote_cq_ready and not change.is_cq_ready())
 
   def num_changes(self):
     return len(self.changes)
@@ -41,11 +42,7 @@ class Submitter(object):
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
       c = self.gerrit.get_change(c.change_id)
-      if c.is_merged():
-        continue
-      if not self.vote_review and not self.vote_verify:
-        continue
-      if c.is_verified() and c.is_reviewed():
+      if c.is_merged() or not self.change_needs_action(c):
         continue
 
       self.gerrit.review(c, self.tag, '', False, self.vote_review,
@@ -64,12 +61,12 @@ class Submitter(object):
         merged += 1
         continue
 
-      self.gerrit.review(c, self.tag, '', False, self.vote_review,
-                         self.vote_verify, self.vote_cq_ready,
-                         self.vote_trybot_ready)
+      if self.change_needs_action(c):
+        self.gerrit.review(c, self.tag, '', False, self.vote_review,
+                           self.vote_verify, self.vote_cq_ready,
+                           self.vote_trybot_ready)
 
       self.in_flight.append(c)
-
 
     sys.stdout.write('\r%d Changes:                                       \n' %
                      self.num_changes())
@@ -81,9 +78,9 @@ class Submitter(object):
       return True
 
     c = self.in_flight[0]
-    sys.stdout.write('\rDetecting change (%d - %s)' % (c.number, c.url()))
+    sys.stdout.write('\rDetecting.. (%s)' % c.url())
     c = self.gerrit.get_change(c.change_id)
-    if c.is_merged() or self.change_needs_action(c):
+    if self.change_needs_action(c):
       return True
 
     return False
@@ -104,17 +101,13 @@ def main():
   args = parser.parse_args()
 
   s = Submitter(args.last_cid, args.review, args.verify, args.ready)
-  first_pass = True
+  s.review_changes()
   while True:
     s.submit_changes()
     if s.num_in_flight() == 0:
       sys.stdout.write('\n\nCongratulations, your changes have landed!\n\n')
       return True
 
-    if first_pass:
-      s.review_changes()
-
-    first_pass = False
     if not args.daemon:
       break
 

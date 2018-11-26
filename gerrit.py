@@ -80,15 +80,12 @@ class Gerrit(object):
     auth = HTTPBasicAuthFromNetrc(url=url)
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
+    self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS']
 
-  def get_change(self, change_id=None, change_num=None):
-    ret = self.query_changes(change_id=change_id, change_num=change_num)
-    if (len(ret) == 0):
-      return None
-    elif (len(ret) > 1):
-      raise ValueError('More than one change returned for query ({}/{})'.format(
-                          change_id, change_num))
-    return ret[0]
+  def get_change(self, change_id):
+    uri = '/changes/{}?o={}'.format(change_id, '&o='.join(self.change_options))
+    rest = self.rest.get(uri)
+    return GerritChange(self.url, rest)
 
   def get_related_changes(self, change):
     uri = '/changes/{}/revisions/current/related'.format(change.id)
@@ -114,9 +111,8 @@ class Gerrit(object):
       query.append('change:{}'.format(change_num))
 
 
-    options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS']
-
-    uri = '/changes/?q={}&o={}'.format('+'.join(query),'&o='.join(options))
+    uri = '/changes/?q={}&o={}'.format('+'.join(query),
+                                       '&o='.join(self.change_options))
     changes = []
     for c in self.rest.get(uri):
       changes.append(GerritChange(self.url, c))
@@ -138,14 +134,21 @@ class Gerrit(object):
         'message': message,
         'notify': 'OWNER' if notify_owner else 'NONE',
     }
+
+    labels = {}
     if vote_code_review:
-        review['labels'] = { 'Code-Review': vote_code_review }
+      labels['Code-Review'] = vote_code_review
     if vote_verified:
-        review['labels'] = { 'Verified': vote_verified }
+      labels['Verified'] = vote_verified
     if vote_cq_ready:
-        review['labels'] = { 'Commit-Queue': vote_cq_ready }
+      labels['Commit-Queue'] = vote_cq_ready
     if vote_trybot_ready:
-        review['labels'] = { 'Trybot-Ready': vote_trybot_ready }
+      labels['Trybot-Ready'] = vote_trybot_ready
+
+    if labels:
+      review['labels'] = labels
+
+    pprint.PrettyPrinter(indent=4).pprint(review)
     return self.rest.review(change.id, change.current_revision.id,
                             json.dumps(review))
 
