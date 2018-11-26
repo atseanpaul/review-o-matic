@@ -78,7 +78,7 @@ class Submitter(object):
       return True
 
     c = self.in_flight[0]
-    sys.stdout.write('\rDetecting.. (%s)' % c.url())
+    sys.stdout.write('\rDetecting: %s' % c.url())
     c = self.gerrit.get_change(c.change_id)
     if self.change_needs_action(c):
       return True
