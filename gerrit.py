@@ -148,7 +148,7 @@ class Gerrit(object):
     if labels:
       review['labels'] = labels
 
-    pprint.PrettyPrinter(indent=4).pprint(review)
+    #pprint.PrettyPrinter(indent=4).pprint(review)
     return self.rest.review(change.id, change.current_revision.id,
                             json.dumps(review))
 
