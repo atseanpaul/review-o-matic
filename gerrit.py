@@ -51,7 +51,10 @@ class GerritChange(object):
     #pprint.PrettyPrinter(indent=4).pprint(rest)
 
   def __parse_votes(self, rest, array, label):
-    for l in rest['labels'][label]['all']:
+    values = rest['labels'][label].get('all')
+    if not values:
+      return
+    for l in values:
       value = l.get('value')
       if value:
         array.append(value)
