@@ -18,6 +18,9 @@ class GerritRevision(object):
     self.id = id
     self.ref = rest['ref']
     self.number = rest['_number']
+    self.commit_message = ''.join(rest['commit_with_footers'])
+    self.uploader_name = ''.join(rest['uploader']['name'])
+    self.uploader_email = ''.join(rest['uploader']['email'])
 
 class GerritChange(object):
   def __init__(self, url, rest):
@@ -35,6 +38,7 @@ class GerritChange(object):
     self.current_revision = GerritRevision(
             rest['current_revision'],
             rest['revisions'][rest['current_revision']])
+
     self.messages = []
     for m in rest['messages']:
       self.messages.append(GerritMessage(m))
@@ -48,7 +52,6 @@ class GerritChange(object):
     self.vote_verified = []
     self.__parse_votes(rest, self.vote_verified, 'Verified')
 
-    #pprint.PrettyPrinter(indent=4).pprint(rest)
 
   def __parse_votes(self, rest, array, label):
     values = rest['labels'][label].get('all')
@@ -83,7 +86,8 @@ class Gerrit(object):
     auth = HTTPBasicAuthFromNetrc(url=url)
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
-    self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS']
+    self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS',
+                           'DETAILED_ACCOUNTS', 'COMMIT_FOOTERS']
 
   def get_change(self, change_id):
     uri = '/changes/{}?o={}'.format(change_id, '&o='.join(self.change_options))

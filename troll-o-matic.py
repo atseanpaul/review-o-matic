@@ -6,10 +6,47 @@ from gerrit import Gerrit, GerritRevision, GerritMessage
 import argparse
 import datetime
 import random
+import re
 import sys
 import time
 
 class Troll(object):
+  STRING_HEADER='''
+-- Automated message --
+'''
+  STRING_SUCCESS='''
+This change does not differ from its upstream source. It is certified {}
+by review-o-matic!
+'''
+  STRING_MISSING_FIELDS='''
+Your commit message is missing the following required field(s):
+    {}
+'''
+  STRING_UPSTREAM_DIFF='''
+This patch differs from the source commit.
+
+Since this is an UPSTREAM labeled patch, it shouldn't. Either this reviewing
+script is incorrect (totally possible, pls send patches!), or something changed
+when this was backported. If the backport required changes, please consider
+using the BACKPORT label with a description of you downstream changes in your
+commit message.
+'''
+  STRING_BACKPORT_DIFF='''
+This is expected, and this message is posted to make reviewing backports easier.
+'''
+  STRING_FROMGIT_DIFF='''
+This may be expected, this message is posted to make reviewing backports easier.
+'''
+  STRING_UNSUCCESSFUL_FOOTER='''
+Below is a diff of the upstream patch referenced in this commit message, vs this
+patch.
+
+'''
+  STRING_FOOTER='''
+---
+Details available at https://github.com/atseanpaul/review-o-matic
+'''
+
   def __init__(self, url, args):
     self.url = url
     self.args = args
@@ -23,53 +60,52 @@ class Troll(object):
   def handle_successful_review(self, change):
     print('Adding successful review for change {}'.format(change.url()))
 
-    msg = '''
-      -- Automated message --
-      This change has been certified {} by review-o-matic!
-      Details available at https://github.com/atseanpaul/review-o-matic
-    '''.format(random.choice(self.swag))
+    msg = self.STRING_HEADER
+    msg += self.STRING_SUCCESS.format(random.choice(self.swag))
+    msg += self.STRING_FOOTER
     self.gerrit.review(change, self.tag, msg, True, vote_code_review=1)
+
+
+  def handle_missing_fields_review(self, change, fields):
+    print('Adding missing fields review for change {}'.format(change.url()))
+
+    msg = self.STRING_HEADER
+    missing = []
+    if not fields['bug']:
+      missing.append('BUG=')
+    if not fields['test']:
+      missing.append('TEST=')
+    if not fields['sob']:
+      cur_rev = change.current_revision
+      missing.append('Signed-off-by: {} <{}>'.format(cur_rev.uploader_name,
+                                                     cur_rev.uploader_email))
+
+    msg += self.STRING_MISSING_FIELDS.format(', '.join(missing))
+    msg += self.STRING_FOOTER
+    self.gerrit.review(change, self.tag, msg, True, vote_code_review=-1)
 
 
   def handle_unsuccessful_review(self, change, prefix, result):
     vote = 0
     notify = False
 
-    msg = '''
-      -- Automated message --
-      This patch differs from the source commit.
-    '''
+    msg = self.STRING_HEADER
 
     if prefix == 'UPSTREAM':
       vote = -1
       notify = True
-      msg += '''
-        Since this is an UPSTREAM labeled patch, it shouldn't. Either this
-        reviewing script is incorrect (totally possible, pls send patches!),
-        or something changed when this was backported. If the backport
-        required changes, please consider using the BACKPORT label with a
-        description of you downstream changes.
-      '''
-    else:
-      msg += '''
-        This is expected, and this message is posted to make reviewing
-        backports easier.
-      '''
+      msg += self.STRING_UPSTREAM_DIFF
+    elif prefix == 'BACKPORT':
+      msg += self.STRING_BACKPORT_DIFF
+    elif prefix == 'FROMGIT':
+      msg += self.STRING_FROMGIT_DIFF
 
-    msg += '''
-      Below is a diff of the upstream patch referenced in this commit message,
-      vs this patch.
-      ---------------
-      '''
+    msg += self.STRING_UNSUCCESSFUL_FOOTER
 
     for l in result:
       msg += '{}\n'.format(l)
 
-    msg += '''
-
-      ---------------
-      Details available at https://github.com/atseanpaul/review-o-matic
-    '''
+    msg += self.STRING_FOOTER
 
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
@@ -92,6 +128,8 @@ class Troll(object):
     cur_change = 1
     line_feed = False
     for c in changes:
+      cur_rev = c.current_revision
+
       if self.args.verbose:
         sys.stdout.write('{}Processing change {}/{}'.format(
                             '\r' if line_feed else '',
@@ -105,16 +143,33 @@ class Troll(object):
 
       skip = False
       for m in c.messages:
-        if m.tag == self.tag and m.revision_num == c.current_revision.number:
+        if m.tag == self.tag and m.revision_num == cur_rev.number:
           skip = True
-
       if skip:
         continue
 
       line_feed = False
       print('')
 
-      gerrit_patch = rev.get_commit_from_remote('cros', c.current_revision.ref)
+      fields={'sob':False, 'bug':False, 'test':False}
+      sob_re = re.compile('Signed-off-by:\s+{}\s+<{}>'.format(
+                                cur_rev.uploader_name, cur_rev.uploader_email))
+      for l in cur_rev.commit_message.splitlines():
+        if l.startswith('BUG='):
+          fields['bug'] = True
+          continue
+        if l.startswith('TEST='):
+          fields['test'] = True
+          continue
+        if sob_re.match(l):
+          fields['sob'] = True
+          continue
+
+      if not fields['bug'] or not fields['test'] or not fields['sob']:
+        self.handle_missing_fields_review(c, fields)
+        continue
+
+      gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
 
       upstream_sha = rev.get_cherry_pick_sha_from_patch(gerrit_patch)
       if not upstream_sha:
