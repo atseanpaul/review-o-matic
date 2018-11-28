@@ -9,6 +9,7 @@ import random
 import re
 import sys
 import time
+import urllib
 
 class Troll(object):
   STRING_HEADER='''
@@ -55,6 +56,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     self.swag = ['Rocky Mountain Cold', 'Frrrresh', 'Crisper Than Cabbage',
                  'Awesome', 'Ahhhmazing', 'Cool As A Cucumber',
                  'Gold Jerry! Gold!', 'Most Excellent']
+    self.blacklist = []
 
 
   def handle_successful_review(self, change):
@@ -120,6 +122,10 @@ Details available at https://github.com/atseanpaul/review-o-matic
                                         after=after)
     return changes
 
+  def print_error(self, error):
+    if self.args.verbose:
+      sys.stderr.write('\n')
+    sys.stderr.write(error)
 
   def process_changes(self, prefix, changes):
     rev = Reviewer(git_dir=self.args.git_dir, verbose=self.args.verbose,
@@ -138,6 +144,9 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
       line_feed = True
 
+      if c in self.blacklist:
+        continue
+
       if not c.subject.startswith(prefix) or 'FROMLIST' in c.subject:
         continue
 
@@ -149,7 +158,8 @@ Details available at https://github.com/atseanpaul/review-o-matic
         continue
 
       line_feed = False
-      print('')
+      if self.args.verbose:
+        print('')
 
       fields={'sob':False, 'bug':False, 'test':False}
       sob_re = re.compile('Signed-off-by:\s+{}\s+<{}>'.format(
@@ -173,16 +183,16 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
       upstream_sha = rev.get_cherry_pick_sha_from_patch(gerrit_patch)
       if not upstream_sha:
-        sys.stderr.write('\nERROR: failed to get sha for "{}" ({})\n'.format(
-          c.subject, c.url()))
+        self.print_error('ERROR: No cherry pick sha for {}\n'.format(c))
+        self.blacklist.append(c)
         continue
 
       try:
         upstream_patch = rev.get_commit_from_sha(upstream_sha)
       except:
-        sys.stderr.write(
-            '\nERROR: failed to get commit for sha "{}" ({})\n'.format(
-                c.subject, c.url()))
+        self.print_error(
+            'ERROR: Cherry pick sha not found in git for {}\n'.format(c))
+        self.blacklist.append(c)
         continue
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
@@ -197,14 +207,26 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
 
   def run(self):
-    prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
-    subsystems = ['drm', 'gpu', 'msm', 'dt-bindings']
-    for p in prefixes:
-      for s in subsystems:
-        changes = self.get_changes(p,s )
+    while True:
+      try:
+        prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
+        subsystems = ['drm', 'gpu', 'msm', 'dt-bindings']
+        for p in prefixes:
+          for s in subsystems:
+            changes = self.get_changes(p,s )
+            if self.args.verbose:
+              print('{} changes for prefix {}'.format(len(changes), p))
+            self.process_changes(p, changes)
+        if not self.args.daemon:
+          break
         if self.args.verbose:
-          print('{} changes for prefix {}'.format(len(changes), p))
-        self.process_changes(p, changes)
+          print('Finished! Going to sleep until next run')
+
+      except urllib.error.HTTPError:
+        self.print_error('Got HTTPError from gerrit, retrying!')
+        time.sleep(60)
+
+      time.sleep(120)
 
 
 def main():
@@ -216,14 +238,8 @@ def main():
     help='Run in daemon mode, for continuous trolling')
   args = parser.parse_args()
 
-  while True:
-    troll = Troll('https://chromium-review.googlesource.com', args)
-    troll.run()
-    if not args.daemon:
-      break
-    if args.verbose:
-      print('Finished! Going to sleep until next run')
-    time.sleep(120)
+  troll = Troll('https://chromium-review.googlesource.com', args)
+  troll.run()
 
 if __name__ == '__main__':
   sys.exit(main())

@@ -13,14 +13,23 @@ class GerritMessage(object):
     self.message = rest['message']
 
 class GerritRevision(object):
-  def __init__(self, id, rest):
+  def __init__(self, revision_id, rest):
     # http://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#revision-info
-    self.id = id
+    self.revision_id = revision_id
     self.ref = rest['ref']
     self.number = rest['_number']
     self.commit_message = ''.join(rest['commit_with_footers'])
     self.uploader_name = ''.join(rest['uploader']['name'])
     self.uploader_email = ''.join(rest['uploader']['email'])
+
+  def __eq__(self, other):
+    return self.revision_id == other.revision_id and self.number == other.number
+
+  def __hash__(self):
+    return hash((self.revision_id, self.number))
+
+  def __str__(self):
+    return 'id={}, rev={}'.format(self.revision_id, self.number)
 
 class GerritChange(object):
   def __init__(self, url, rest):
@@ -52,6 +61,16 @@ class GerritChange(object):
     self.vote_verified = []
     self.__parse_votes(rest, self.vote_verified, 'Verified')
 
+
+  def __eq__(self, other):
+    return self.change_id == other.change_id and \
+           self.current_revision == other.current_revision
+
+  def __hash__(self):
+    return hash((self.change_id, self.current_revision))
+
+  def __str__(self):
+    return '"{}" ({})'.format(self.subject, self.url())
 
   def __parse_votes(self, rest, array, label):
     values = rest['labels'][label].get('all')
