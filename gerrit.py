@@ -13,9 +13,9 @@ class GerritMessage(object):
     self.message = rest['message']
 
 class GerritRevision(object):
-  def __init__(self, revision_id, rest):
+  def __init__(self, id, rest):
     # http://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#revision-info
-    self.revision_id = revision_id
+    self.id = id
     self.ref = rest['ref']
     self.number = rest['_number']
     self.commit_message = ''.join(rest['commit_with_footers'])
@@ -23,13 +23,13 @@ class GerritRevision(object):
     self.uploader_email = ''.join(rest['uploader']['email'])
 
   def __eq__(self, other):
-    return self.revision_id == other.revision_id and self.number == other.number
+    return self.id == other.id and self.number == other.number
 
   def __hash__(self):
-    return hash((self.revision_id, self.number))
+    return hash((self.id, self.number))
 
   def __str__(self):
-    return 'id={}, rev={}'.format(self.revision_id, self.number)
+    return 'id={}, rev={}'.format(self.id, self.number)
 
 class GerritChange(object):
   def __init__(self, url, rest):
