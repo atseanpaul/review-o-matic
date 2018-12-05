@@ -191,6 +191,8 @@ def output_processed_msg(args, msg):
       remove_line(msg, line_num)
     else:
       line_num,_ = find_line(msg, lambda m: m.type == LineType.CHERRY_PICK)
+      if line_num == None:
+          raise ValueError('Could not find (cherry picked...) line!')
       line_num += 1
     msg.insert(line_num, new_line)
 

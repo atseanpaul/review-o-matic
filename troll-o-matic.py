@@ -7,6 +7,7 @@ import argparse
 import datetime
 import random
 import re
+import requests
 import sys
 import time
 import urllib
@@ -222,8 +223,8 @@ Details available at https://github.com/atseanpaul/review-o-matic
         if self.args.verbose:
           print('Finished! Going to sleep until next run')
 
-      except urllib.error.HTTPError:
-        self.print_error('Got HTTPError from gerrit, retrying!')
+      except requests.exceptions.HTTPError as e:
+        self.print_error('HTTPError ({})\n'.format(e.response.status_code))
         time.sleep(60)
 
       time.sleep(120)
