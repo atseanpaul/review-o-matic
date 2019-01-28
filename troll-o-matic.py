@@ -24,9 +24,11 @@ by review-o-matic!
 Your commit message is missing the following required field(s):
     {}
 '''
-  STRING_UPSTREAM_DIFF='''
+  STRING_UNSUCCESSFUL_HEADER='''
 This patch differs from the source commit.
 
+'''
+  STRING_UPSTREAM_DIFF='''
 Since this is an UPSTREAM labeled patch, it shouldn't. Either this reviewing
 script is incorrect (totally possible, pls send patches!), or something changed
 when this was backported. If the backport required changes, please consider
@@ -93,6 +95,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     notify = False
 
     msg = self.STRING_HEADER
+    msg += self.STRING_UNSUCCESSFUL_HEADER
 
     if prefix == 'UPSTREAM':
       vote = -1

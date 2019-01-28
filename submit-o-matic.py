@@ -24,7 +24,10 @@ class Submitter(object):
     self.gerrit = Gerrit('https://chromium-review.googlesource.com')
     last_change = self.gerrit.get_change(last_cid)
     self.changes = self.gerrit.get_related_changes(last_change)
-    self.changes.reverse()
+    if not self.changes:
+      self.changes = [last_change]
+    else:
+      self.changes.reverse()
 
   def change_needs_action(self, change):
     return change.is_merged() or \
