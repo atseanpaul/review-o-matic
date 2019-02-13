@@ -242,7 +242,6 @@ Details available at https://github.com/atseanpaul/review-o-matic
     while True:
       try:
         prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
-        subsystems = ['drm', 'gpu', 'msm', 'dt-bindings']
         for p in prefixes:
           changes = self.get_changes(p)
           if self.args.verbose:
