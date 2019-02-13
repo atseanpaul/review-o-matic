@@ -66,6 +66,9 @@ Details available at https://github.com/atseanpaul/review-o-matic
                  'Gold Jerry! Gold!', 'Most Excellent']
     self.blacklist = []
 
+  def do_review(self, change, msg, notify, vote):
+    if not self.args.dry_run:
+      self.gerrit.review(change, self.tag, msg, notify, vote_code_review=vote)
 
   def handle_successful_review(self, change):
     print('Adding successful review for change {}'.format(change.url()))
@@ -73,7 +76,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     msg = self.STRING_HEADER
     msg += self.STRING_SUCCESS.format(random.choice(self.swag))
     msg += self.STRING_FOOTER
-    self.gerrit.review(change, self.tag, msg, True, vote_code_review=1)
+    self.do_review(change, msg, True, 1)
 
 
   def handle_missing_fields_review(self, change, fields):
@@ -92,7 +95,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
     msg += self.STRING_MISSING_FIELDS.format(', '.join(missing))
     msg += self.STRING_FOOTER
-    self.gerrit.review(change, self.tag, msg, True, vote_code_review=-1)
+    self.do_review(change, msg, True, 1)
 
   def handle_missing_hash_review(self, change):
     print('Adding missing hash review for change {}'.format(change.url()))
@@ -100,7 +103,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     msg = self.STRING_HEADER
     msg += self.STRING_MISSING_HASH
     msg += self.STRING_FOOTER
-    self.gerrit.review(change, self.tag, msg, True, vote_code_review=-1)
+    self.do_review(change, msg, True, 1)
 
   def handle_unsuccessful_review(self, change, prefix, result):
     vote = 0
@@ -128,7 +131,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
 
-    self.gerrit.review(change, self.tag, msg, notify, vote)
+    self.do_review(change, msg, notify, vote)
 
 
   def get_changes(self, prefix):
@@ -250,6 +253,8 @@ def main():
   parser.add_argument('--chatty', help='print diffs', action='store_true')
   parser.add_argument('--daemon', action='store_true',
     help='Run in daemon mode, for continuous trolling')
+  parser.add_argument('--dry-run', action='store_true', default=False,
+                      help='skip the review step')
   args = parser.parse_args()
 
   troll = Troll('https://chromium-review.googlesource.com', args)
