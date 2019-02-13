@@ -104,7 +104,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
     msg += self.STRING_MISSING_FIELDS.format(', '.join(missing))
     msg += self.STRING_FOOTER
-    self.do_review(change, msg, True, 1)
+    self.do_review(change, msg, True, -1)
 
   def handle_missing_hash_review(self, change):
     print('Adding missing hash review for change {}'.format(change.url()))
@@ -112,7 +112,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
     msg = self.STRING_HEADER
     msg += self.STRING_MISSING_HASH
     msg += self.STRING_FOOTER
-    self.do_review(change, msg, True, 1)
+    self.do_review(change, msg, True, -1)
 
   def handle_unsuccessful_review(self, change, prefix, result):
     vote = 0
