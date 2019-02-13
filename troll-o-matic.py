@@ -209,16 +209,21 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
       gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
 
-      upstream_sha = rev.get_cherry_pick_sha_from_patch(gerrit_patch)
-      if not upstream_sha:
+      upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
+      if not upstream_shas:
         self.handle_missing_hash_review(c)
         continue
 
-      try:
-        upstream_patch = rev.get_commit_from_sha(upstream_sha)
-      except:
-        self.print_error(
-            'ERROR: Cherry pick sha not found in git for {}\n'.format(c))
+      upstream_patch = None
+      for s in reversed(upstream_shas):
+        try:
+          upstream_patch = rev.get_commit_from_sha(s)
+          break
+        except:
+          continue
+      if not upstream_patch:
+        self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
+                                    c, upstream_shas))
         self.blacklist.append(c)
         continue
 
