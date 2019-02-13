@@ -24,6 +24,11 @@ by review-o-matic!
 Your commit message is missing the following required field(s):
     {}
 '''
+  STRING_MISSING_HASH='''
+Your commit message is missing the upstream commit hash. It should be in the
+form:
+    (cherry picked from commit <commit SHA>)
+'''
   STRING_UNSUCCESSFUL_HEADER='''
 This patch differs from the source commit.
 
@@ -89,6 +94,13 @@ Details available at https://github.com/atseanpaul/review-o-matic
     msg += self.STRING_FOOTER
     self.gerrit.review(change, self.tag, msg, True, vote_code_review=-1)
 
+  def handle_missing_hash_review(self, change):
+    print('Adding missing hash review for change {}'.format(change.url()))
+
+    msg = self.STRING_HEADER
+    msg += self.STRING_MISSING_HASH
+    msg += self.STRING_FOOTER
+    self.gerrit.review(change, self.tag, msg, True, vote_code_review=-1)
 
   def handle_unsuccessful_review(self, change, prefix, result):
     vote = 0
@@ -187,8 +199,7 @@ Details available at https://github.com/atseanpaul/review-o-matic
 
       upstream_sha = rev.get_cherry_pick_sha_from_patch(gerrit_patch)
       if not upstream_sha:
-        self.print_error('ERROR: No cherry pick sha for {}\n'.format(c))
-        self.blacklist.append(c)
+        self.handle_missing_hash_review(c)
         continue
 
       try:
