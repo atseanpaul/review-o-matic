@@ -121,7 +121,7 @@ class Gerrit(object):
     return changes
 
   def query_changes(self, status=None, message=None, after=None, age_days=None,
-                    change_id=None, change_num=None):
+                    change_id=None, change_num=None, project=None):
     query = []
     if message:
       query.append('message:"{}"'.format(urllib.parse.quote(message)))
@@ -135,6 +135,8 @@ class Gerrit(object):
       query.append('change:{}'.format(change_id))
     if change_num:
       query.append('change:{}'.format(change_num))
+    if project:
+      query.append('project:{}'.format(project))
 
 
     uri = '/changes/?q={}&o={}'.format('+'.join(query),

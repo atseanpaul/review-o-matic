@@ -119,11 +119,11 @@ Details available at https://github.com/atseanpaul/review-o-matic
     self.gerrit.review(change, self.tag, msg, notify, vote)
 
 
-  def get_changes(self, prefix, subsystem):
-    message = '{}: {}'.format(prefix, subsystem)
+  def get_changes(self, prefix):
+    message = '{}:'.format(prefix)
     after = datetime.date.today() - datetime.timedelta(days=30)
     changes = self.gerrit.query_changes(status='open', message=message,
-                                        after=after)
+                    after=after, project='chromiumos/third_party/kernel')
     return changes
 
   def print_error(self, error):
@@ -216,11 +216,10 @@ Details available at https://github.com/atseanpaul/review-o-matic
         prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
         subsystems = ['drm', 'gpu', 'msm', 'dt-bindings']
         for p in prefixes:
-          for s in subsystems:
-            changes = self.get_changes(p,s )
-            if self.args.verbose:
-              print('{} changes for prefix {}'.format(len(changes), p))
-            self.process_changes(p, changes)
+          changes = self.get_changes(p)
+          if self.args.verbose:
+            print('{} changes for prefix {}'.format(len(changes), p))
+          self.process_changes(p, changes)
         if not self.args.daemon:
           break
         if self.args.verbose:
