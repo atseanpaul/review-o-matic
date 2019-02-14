@@ -28,6 +28,8 @@ Your commit message is missing the following required field(s):
 Your commit message is missing the upstream commit hash. It should be in the
 form:
     (cherry picked from commit <commit SHA>)
+
+Hint: Use the '-x' argument of git cherry-pick to add this automagically
 '''
   STRING_UNSUCCESSFUL_HEADER='''
 This patch differs from the source commit.
