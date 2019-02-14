@@ -164,13 +164,13 @@ class Gerrit(object):
     }
 
     labels = {}
-    if vote_code_review:
+    if vote_code_review != None:
       labels['Code-Review'] = vote_code_review
-    if vote_verified:
+    if vote_verified != None:
       labels['Verified'] = vote_verified
-    if vote_cq_ready:
+    if vote_cq_ready != None:
       labels['Commit-Queue'] = vote_cq_ready
-    if vote_trybot_ready:
+    if vote_trybot_ready != None:
       labels['Trybot-Ready'] = vote_trybot_ready
 
     if labels:
