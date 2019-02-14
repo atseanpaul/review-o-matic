@@ -55,7 +55,14 @@ patch.
 '''
   STRING_FOOTER='''
 ---
-Details available at https://github.com/atseanpaul/review-o-matic
+To learn more about backporting kernel patches to Chromium OS, check out:
+  https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
+
+If you're curious about how this message was generated, head over to:
+  https://github.com/atseanpaul/review-o-matic
+
+This link is not useful:
+  https://thats.poorly.run/
 '''
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
