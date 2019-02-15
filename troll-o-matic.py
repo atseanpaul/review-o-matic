@@ -207,7 +207,7 @@ This link is not useful:
 
   def get_changes(self, prefix):
     message = '{}:'.format(prefix)
-    after = datetime.date.today() - datetime.timedelta(days=30)
+    after = datetime.date.today() - datetime.timedelta(days=5)
     changes = self.gerrit.query_changes(status='open', message=message,
                     after=after, project='chromiumos/third_party/kernel')
     return changes
