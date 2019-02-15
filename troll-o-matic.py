@@ -19,6 +19,7 @@ class ReviewType(enum.Enum):
   ALTERED_UPSTREAM = 'altered_upstream'
   MISSING_FIELDS = 'missing_fields'
   MISSING_HASH = 'missing_hash'
+  INCORRECT_PREFIX = 'incorrect_prefix'
 
   def __str__(self):
     return self.value
@@ -30,6 +31,14 @@ class Troll(object):
   STRING_SUCCESS='''
 This change does not differ from its upstream source. It is certified {}
 by review-o-matic!
+'''
+  STRING_INCORRECT_PREFIX='''
+This change has a BACKPORT prefix, however it does not differ from its upstream
+source. The BACKPORT prefix should be primarily used for patches which were
+altered during the cherry-pick (due to conflicts or downstream inconsistencies).
+
+Consider changing your subject prefix to UPSTREAM (or FROMGIT as appropriate) to
+better reflect the contents of this patch.
 '''
   STRING_MISSING_FIELDS='''
 Your commit message is missing the following required field(s):
@@ -96,20 +105,25 @@ This link is not useful:
     self.blacklist = []
     self.stats = { ReviewType.SUCCESS: 0, ReviewType.BACKPORT: 0,
                    ReviewType.ALTERED_UPSTREAM: 0, ReviewType.MISSING_FIELDS: 0,
-                   ReviewType.MISSING_HASH: 0 }
+                   ReviewType.MISSING_HASH: 0, ReviewType.INCORRECT_PREFIX: 0 }
 
   def do_review(self, review_type, change, msg, notify, vote):
     self.stats[review_type] += 1
     if not self.args.dry_run:
       self.gerrit.review(change, self.tag, msg, notify, vote_code_review=vote)
 
-  def handle_successful_review(self, change):
-    print('Adding successful review for change {}'.format(change.url()))
-
+  def handle_successful_review(self, change, prefix):
     msg = self.STRING_HEADER
-    msg += self.STRING_SUCCESS.format(random.choice(self.SWAG))
-    msg += self.STRING_FOOTER
-    self.do_review(ReviewType.SUCCESS, change, msg, True, 1)
+    if prefix == 'BACKPORT':
+      print('Adding incorrect prefix review for change {}'.format(change.url()))
+      msg += self.STRING_INCORRECT_PREFIX
+      msg += self.STRING_FOOTER
+      self.do_review(ReviewType.INCORRECT_PREFIX, change, msg, True, 0)
+    else:
+      print('Adding successful review for change {}'.format(change.url()))
+      msg += self.STRING_SUCCESS.format(random.choice(self.SWAG))
+      msg += self.STRING_FOOTER
+      self.do_review(ReviewType.SUCCESS, change, msg, True, 1)
 
 
   def handle_missing_fields_review(self, change, fields):
@@ -257,7 +271,7 @@ This link is not useful:
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
       if len(result) == 0:
-        self.handle_successful_review(c)
+        self.handle_successful_review(c, prefix)
         continue
 
       self.handle_unsuccessful_review(c, prefix, result)
