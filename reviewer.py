@@ -62,6 +62,12 @@ class Reviewer(object):
         ret.append(l)
     return ret
 
+  def find_fixes_reference(self, sha):
+    cmd = self.git_cmd + ['log', '--format=oneline', '--abbrev-commit',
+                          '--grep', 'Fixes: {}'.format(sha[:11]),
+                          '{}..'.format(sha)]
+    return subprocess.check_output(cmd).decode('UTF-8')
+
   def get_cherry_pick_shas_from_patch(self, patch):
     regex = re.compile('\(cherry.picked from commit ([0-9a-f]*)', flags=re.I)
     m = regex.findall(patch)

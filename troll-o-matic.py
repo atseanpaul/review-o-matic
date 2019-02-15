@@ -20,6 +20,8 @@ class ReviewType(enum.Enum):
   MISSING_FIELDS = 'missing_fields'
   MISSING_HASH = 'missing_hash'
   INCORRECT_PREFIX = 'incorrect_prefix'
+  FIXES_REF = 'fixes_ref'
+
 
   def __str__(self):
     return self.value
@@ -82,6 +84,11 @@ Below is a diff of the upstream patch referenced in this commit message, vs this
 patch.
 
 '''
+  STRING_FOUND_FIXES_REF='''
+!! NOTE: This patch has been referenced in the Fixes: tag of another commit. If
+!!       you haven't already, consider backporting the following patch:
+!!  {}
+'''
   STRING_FOOTER='''
 ---
 To learn more about backporting kernel patches to Chromium OS, check out:
@@ -114,36 +121,41 @@ This link is not useful:
     self.blacklist = []
     self.stats = { ReviewType.SUCCESS: 0, ReviewType.BACKPORT: 0,
                    ReviewType.ALTERED_UPSTREAM: 0, ReviewType.MISSING_FIELDS: 0,
-                   ReviewType.MISSING_HASH: 0, ReviewType.INCORRECT_PREFIX: 0 }
+                   ReviewType.MISSING_HASH: 0, ReviewType.INCORRECT_PREFIX: 0,
+                   ReviewType.FIXES_REF: 0 }
 
-  def do_review(self, review_type, change, msg, notify, vote):
+  def do_review(self, review_type, change, fixes_ref, msg, notify, vote):
+    final_msg = self.STRING_HEADER
+    if fixes_ref:
+      print('Adding fixes ref for change {}'.format(change.url()))
+      self.stats[ReviewType.FIXES_REF] += 1
+      final_msg += self.STRING_FOUND_FIXES_REF.format(fixes_ref)
+    final_msg += msg
+    final_msg += self.STRING_FOOTER
+
     self.stats[review_type] += 1
     if not self.args.dry_run:
-      self.gerrit.review(change, self.tag, msg, notify, vote_code_review=vote)
+      self.gerrit.review(change, self.tag, final_msg, notify,
+                         vote_code_review=vote)
     else:
       print('Review for change: {}'.format(change.url()))
       print('  Type:{}, Vote:{}, Notify:{}'.format(review_type, vote, notify))
-      print(msg)
+      print(final_msg)
       print('------')
 
-  def handle_successful_review(self, change, prefix):
-    msg = self.STRING_HEADER
+  def handle_successful_review(self, change, prefix, fixes_ref):
     if prefix == 'BACKPORT':
       print('Adding incorrect prefix review for change {}'.format(change.url()))
-      msg += self.STRING_INCORRECT_PREFIX
-      msg += self.STRING_FOOTER
+      msg = self.STRING_INCORRECT_PREFIX
       self.do_review(ReviewType.INCORRECT_PREFIX, change, msg, True, 0)
     else:
       print('Adding successful review for change {}'.format(change.url()))
-      msg += self.STRING_SUCCESS.format(random.choice(self.SWAG))
-      msg += self.STRING_FOOTER
-      self.do_review(ReviewType.SUCCESS, change, msg, True, 1)
+      msg = self.STRING_SUCCESS.format(random.choice(self.SWAG))
+      self.do_review(ReviewType.SUCCESS, change, fixes_ref, msg, True, 1)
 
 
-  def handle_missing_fields_review(self, change, fields, result):
+  def handle_missing_fields_review(self, change, fields, result, fixes_ref):
     print('Adding missing fields review for change {}'.format(change.url()))
-
-    msg = self.STRING_HEADER
     missing = []
     if not fields['bug']:
       missing.append('BUG=')
@@ -154,7 +166,7 @@ This link is not useful:
       missing.append('Signed-off-by: {} <{}>'.format(cur_rev.uploader_name,
                                                      cur_rev.uploader_email))
 
-    msg += self.STRING_MISSING_FIELDS.format(', '.join(missing))
+    msg = self.STRING_MISSING_FIELDS.format(', '.join(missing))
     if len(result) == 0:
       msg += self.STRING_MISSING_FIELDS_SUCCESS.format(random.choice(self.SWAG))
     else:
@@ -163,25 +175,19 @@ This link is not useful:
       for l in result:
         msg += '{}\n'.format(l)
 
-    msg += self.STRING_FOOTER
-    self.do_review(ReviewType.MISSING_FIELDS, change, msg, True, -1)
+    self.do_review(ReviewType.MISSING_FIELDS, change, fixes_ref, msg, True, -1)
 
   def handle_missing_hash_review(self, change):
     print('Adding missing hash review for change {}'.format(change.url()))
+    msg = self.STRING_MISSING_HASH
+    self.do_review(ReviewType.MISSING_HASH, change, None, msg, True, -1)
 
-    msg = self.STRING_HEADER
-    msg += self.STRING_MISSING_HASH
-    msg += self.STRING_FOOTER
-    self.do_review(ReviewType.MISSING_HASH, change, msg, True, -1)
-
-  def handle_unsuccessful_review(self, change, prefix, result):
+  def handle_unsuccessful_review(self, change, prefix, result, fixes_ref):
     vote = 0
     notify = False
     review_type = ReviewType.BACKPORT
 
-    msg = self.STRING_HEADER
-    msg += self.STRING_UNSUCCESSFUL_HEADER
-
+    msg = self.STRING_UNSUCCESSFUL_HEADER
     if prefix == 'UPSTREAM':
       review_type = ReviewType.ALTERED_UPSTREAM
       vote = -1
@@ -197,12 +203,10 @@ This link is not useful:
     for l in result:
       msg += '{}\n'.format(l)
 
-    msg += self.STRING_FOOTER
-
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
 
-    self.do_review(review_type, change, msg, notify, vote)
+    self.do_review(review_type, change, fixes_ref, msg, notify, vote)
 
 
   def get_changes(self, prefix):
@@ -263,9 +267,11 @@ This link is not useful:
         continue
 
       upstream_patch = None
+      upstream_sha = None
       for s in reversed(upstream_shas):
         try:
           upstream_patch = rev.get_commit_from_sha(s)
+          upstream_sha = s
           break
         except:
           continue
@@ -274,6 +280,8 @@ This link is not useful:
                                     c, upstream_shas))
         self.blacklist.append(c)
         continue
+
+      fixes_ref = rev.find_fixes_reference(upstream_sha)
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
 
@@ -290,14 +298,14 @@ This link is not useful:
           fields['sob'] = True
           continue
       if not fields['bug'] or not fields['test'] or not fields['sob']:
-        self.handle_missing_fields_review(c, fields, result)
+        self.handle_missing_fields_review(c, fields, result, fixes_ref)
         continue
 
       if len(result) == 0:
-        self.handle_successful_review(c, prefix)
+        self.handle_successful_review(c, prefix, fixes_ref)
         continue
 
-      self.handle_unsuccessful_review(c, prefix, result)
+      self.handle_unsuccessful_review(c, prefix, result, fixes_ref)
 
     if self.args.verbose:
       print('')
@@ -321,6 +329,7 @@ This link is not useful:
           for k,v in self.stats.items():
             summary += '{}={} '.format(k,v)
           print(summary)
+          print('')
         if not self.args.daemon:
           break
         if self.args.verbose:
