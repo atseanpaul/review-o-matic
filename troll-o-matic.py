@@ -120,6 +120,11 @@ This link is not useful:
     self.stats[review_type] += 1
     if not self.args.dry_run:
       self.gerrit.review(change, self.tag, msg, notify, vote_code_review=vote)
+    else:
+      print('Review for change: {}'.format(change.url()))
+      print('  Type:{}, Vote:{}, Notify:{}'.format(review_type, vote, notify))
+      print(msg)
+      print('------')
 
   def handle_successful_review(self, change, prefix):
     msg = self.STRING_HEADER
@@ -222,7 +227,9 @@ This link is not useful:
     for c in changes:
       cur_rev = c.current_revision
 
-      if self.args.verbose:
+      if self.args.chatty:
+        print('Processing change {}'.format(c.url()))
+      elif self.args.verbose:
         sys.stdout.write('{}Processing change {}/{}'.format(
                             '\r' if line_feed else '',
                             cur_change, num_changes))
