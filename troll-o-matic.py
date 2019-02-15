@@ -44,6 +44,15 @@ better reflect the contents of this patch.
 Your commit message is missing the following required field(s):
     {}
 '''
+  STRING_MISSING_FIELDS_SUCCESS='''
+Don't worry, there is good news! Your patch does not differ from its upstream
+source. Once the missing fields are present, it will be certified {} (or some
+other similarly official-sounding certification) by review-o-matic!
+'''
+  STRING_MISSING_FIELDS_DIFF='''
+In addition to the missing fields, this patch differs from its upstream source.
+This may be expected, this message is posted to make reviewing backports easier.
+'''
   STRING_MISSING_HASH='''
 Your commit message is missing the upstream commit hash. It should be in the
 form:
@@ -126,7 +135,7 @@ This link is not useful:
       self.do_review(ReviewType.SUCCESS, change, msg, True, 1)
 
 
-  def handle_missing_fields_review(self, change, fields):
+  def handle_missing_fields_review(self, change, fields, result):
     print('Adding missing fields review for change {}'.format(change.url()))
 
     msg = self.STRING_HEADER
@@ -141,6 +150,14 @@ This link is not useful:
                                                      cur_rev.uploader_email))
 
     msg += self.STRING_MISSING_FIELDS.format(', '.join(missing))
+    if len(result) == 0:
+      msg += self.STRING_MISSING_FIELDS_SUCCESS.format(random.choice(self.SWAG))
+    else:
+      msg += self.STRING_MISSING_FIELDS_DIFF
+      msg += self.STRING_UNSUCCESSFUL_FOOTER
+      for l in result:
+        msg += '{}\n'.format(l)
+
     msg += self.STRING_FOOTER
     self.do_review(ReviewType.MISSING_FIELDS, change, msg, True, -1)
 
@@ -231,24 +248,6 @@ This link is not useful:
       if self.args.verbose:
         print('')
 
-      fields={'sob':False, 'bug':False, 'test':False}
-      sob_re = re.compile('Signed-off-by:\s+{}\s+<{}>'.format(
-                                cur_rev.uploader_name, cur_rev.uploader_email))
-      for l in cur_rev.commit_message.splitlines():
-        if l.startswith('BUG='):
-          fields['bug'] = True
-          continue
-        if l.startswith('TEST='):
-          fields['test'] = True
-          continue
-        if sob_re.match(l):
-          fields['sob'] = True
-          continue
-
-      if not fields['bug'] or not fields['test'] or not fields['sob']:
-        self.handle_missing_fields_review(c, fields)
-        continue
-
       gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
 
       upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
@@ -270,6 +269,23 @@ This link is not useful:
         continue
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
+
+      fields={'sob':False, 'bug':False, 'test':False}
+      sob_re = re.compile('Signed-off-by:\s+{}'.format(cur_rev.uploader_name))
+      for l in cur_rev.commit_message.splitlines():
+        if l.startswith('BUG='):
+          fields['bug'] = True
+          continue
+        if l.startswith('TEST='):
+          fields['test'] = True
+          continue
+        if sob_re.match(l):
+          fields['sob'] = True
+          continue
+      if not fields['bug'] or not fields['test'] or not fields['sob']:
+        self.handle_missing_fields_review(c, fields, result)
+        continue
+
       if len(result) == 0:
         self.handle_successful_review(c, prefix)
         continue
