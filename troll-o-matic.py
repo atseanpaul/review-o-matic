@@ -147,7 +147,8 @@ This link is not useful:
     if prefix == 'BACKPORT':
       print('Adding incorrect prefix review for change {}'.format(change.url()))
       msg = self.STRING_INCORRECT_PREFIX
-      self.do_review(ReviewType.INCORRECT_PREFIX, change, msg, True, 0)
+      self.do_review(ReviewType.INCORRECT_PREFIX, change, fixes_ref, msg, True,
+                     0)
     else:
       print('Adding successful review for change {}'.format(change.url()))
       msg = self.STRING_SUCCESS.format(random.choice(self.SWAG))
