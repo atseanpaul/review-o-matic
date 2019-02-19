@@ -95,8 +95,8 @@ class Reviewer(object):
     b = b.split('\n')
 
     # strip the commit messages
-    a = self.__strip_commit_msg(a)
-    b = self.__strip_commit_msg(b)
+    a = self.__strip_commit_msg(a) or []
+    b = self.__strip_commit_msg(b) or []
     a = self.__strip_kruft(a)
     b = self.__strip_kruft(b)
 
