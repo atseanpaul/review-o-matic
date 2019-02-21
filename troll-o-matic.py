@@ -22,7 +22,6 @@ class ReviewType(enum.Enum):
   INCORRECT_PREFIX = 'incorrect_prefix'
   FIXES_REF = 'fixes_ref'
 
-
   def __str__(self):
     return self.value
 
@@ -55,11 +54,18 @@ other similarly official-sounding certification) by review-o-matic!
 In addition to the missing fields, this patch differs from its upstream source.
 This may be expected, this message is posted to make reviewing backports easier.
 '''
-  STRING_MISSING_HASH='''
+  STRING_MISSING_HASH_HEADER='''
 Your commit message is missing the upstream commit hash. It should be in the
 form:
+'''
+  STRING_MISSING_HASH_FMT_FROMGIT='''
+    (cherry picked from commit <commit SHA>
+     <remote git url> <remote git tree>)
+'''
+  STRING_MISSING_HASH_FMT_UPSTREAM='''
     (cherry picked from commit <commit SHA>)
-
+'''
+  STRING_MISSING_HASH_FOOTER='''
 Hint: Use the '-x' argument of git cherry-pick to add this automagically
 '''
   STRING_UNSUCCESSFUL_HEADER='''
@@ -178,9 +184,14 @@ This link is not useful:
 
     self.do_review(ReviewType.MISSING_FIELDS, change, fixes_ref, msg, True, -1)
 
-  def handle_missing_hash_review(self, change):
+  def handle_missing_hash_review(self, change,  prefix):
     print('Adding missing hash review for change {}'.format(change.url()))
-    msg = self.STRING_MISSING_HASH
+    msg = self.STRING_MISSING_HASH_HEADER
+    if prefix == 'FROMGIT':
+      msg += self.STRING_MISSING_HASH_FMT_FROMGIT
+    else:
+      msg += self.STRING_MISSING_HASH_FMT_UPSTREAM
+    msg += self.STRING_MISSING_HASH_FOOTER
     self.do_review(ReviewType.MISSING_HASH, change, None, msg, True, -1)
 
   def handle_unsuccessful_review(self, change, prefix, result, fixes_ref):
@@ -264,7 +275,7 @@ This link is not useful:
 
       upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
       if not upstream_shas:
-        self.handle_missing_hash_review(c)
+        self.handle_missing_hash_review(c, prefix)
         continue
 
       upstream_patch = None
