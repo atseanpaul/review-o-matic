@@ -263,7 +263,7 @@ This link is not useful:
       for m in c.messages:
         if m.tag == self.tag and m.revision_num == cur_rev.number:
           skip = True
-      if skip:
+      if skip and not self.args.force_cl:
         continue
 
       ret = True
@@ -326,6 +326,13 @@ This link is not useful:
 
 
   def run(self):
+    if self.args.force_cl != None:
+      c = self.gerrit.get_change(self.args.force_cl)
+      prefix = c.subject.split(':')[0]
+      print('Force reviewing change  {}'.format(c))
+      self.process_changes(prefix, [c])
+      return
+
     while True:
       try:
         prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
@@ -363,6 +370,7 @@ def main():
     help='Run in daemon mode, for continuous trolling')
   parser.add_argument('--dry-run', action='store_true', default=False,
                       help='skip the review step')
+  parser.add_argument('--force-cl', default=None, help='Force review a CL')
   args = parser.parse_args()
 
   troll = Troll('https://chromium-review.googlesource.com', args)
