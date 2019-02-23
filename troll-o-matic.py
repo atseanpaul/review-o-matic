@@ -41,8 +41,8 @@ This change has a BACKPORT prefix, however it does not differ from its upstream
 source. The BACKPORT prefix should be primarily used for patches which were
 altered during the cherry-pick (due to conflicts or downstream inconsistencies).
 
-Consider changing your subject prefix to UPSTREAM (or FROMGIT as appropriate) to
-better reflect the contents of this patch.
+Consider changing your subject prefix to UPSTREAM (or FROMGIT/FROMLIST as
+appropriate) to better reflect the contents of this patch.
 '''
   STRING_MISSING_FIELDS='''
 Your commit message is missing the following required field(s):
@@ -70,6 +70,11 @@ form:
 '''
   STRING_MISSING_HASH_FOOTER='''
 Hint: Use the '-x' argument of git cherry-pick to add this automagically
+'''
+  STRING_MISSING_AM='''
+Your commit message is missing the patchwork URL. It should be in the
+form:
+    (am from https://patchwork.kernel.org/.../)
 '''
   STRING_UNSUCCESSFUL_HEADER='''
 This patch differs from the source commit.
@@ -167,6 +172,7 @@ This link is not useful:
       print('------')
 
   def handle_successful_review(self, change, prefix, fixes_ref):
+    # TODO: We should tag FROMLIST: BACKPORT: patches as incorrect, if needed
     if prefix == 'BACKPORT':
       print('Adding incorrect prefix review for change {}'.format(change.url()))
       msg = self.STRING_INCORRECT_PREFIX
@@ -211,6 +217,11 @@ This link is not useful:
     msg += self.STRING_MISSING_HASH_FOOTER
     self.do_review(ReviewType.MISSING_HASH, change, None, msg, True, -1)
 
+  def handle_missing_am_review(self, change,  prefix):
+    print('Adding missing am URL for change {}'.format(change.url()))
+    self.do_review(ReviewType.MISSING_HASH, change, None,
+                   self.STRING_MISSING_AM, True, -1)
+
   def handle_unsuccessful_review(self, change, prefix, result, fixes_ref):
     vote = 0
     notify = False
@@ -224,7 +235,7 @@ This link is not useful:
       msg += self.STRING_UPSTREAM_DIFF
     elif prefix == 'BACKPORT':
       msg += self.STRING_BACKPORT_DIFF
-    elif prefix == 'FROMGIT':
+    elif prefix == 'FROMGIT' or prefix == 'FROMLIST':
       msg += self.STRING_FROMGIT_DIFF
 
     msg += self.STRING_UNSUCCESSFUL_FOOTER
@@ -273,7 +284,7 @@ This link is not useful:
       if c in self.blacklist:
         continue
 
-      if not c.subject.startswith(prefix) or 'FROMLIST' in c.subject:
+      if not c.subject.startswith(prefix):
         continue
 
       skip = False
@@ -295,27 +306,53 @@ This link is not useful:
         except:
           continue
 
-      upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
-      if not upstream_shas:
-        self.handle_missing_hash_review(c, prefix)
-        continue
-
-      upstream_patch = None
-      upstream_sha = None
-      for s in reversed(upstream_shas):
-        try:
-          upstream_patch = rev.get_commit_from_sha(s)
-          upstream_sha = s
-          break
-        except:
+      if prefix == 'FROMLIST':
+        upstream_patchworks = rev.get_am_from_from_patch(gerrit_patch)
+        if not upstream_patchworks:
+          self.handle_missing_am_review(c, prefix)
           continue
-      if not upstream_patch:
-        self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
-                                    c, upstream_shas))
-        self.blacklist.append(c)
-        continue
 
-      fixes_ref = rev.find_fixes_reference(upstream_sha)
+        upstream_patch = None
+        for u in reversed(upstream_patchworks):
+          try:
+            upstream_patch = rev.get_commit_from_patchwork(u)
+            break
+          except:
+            continue
+
+        if not upstream_patch:
+          self.print_error(
+            'ERROR: patch missing from patchwork, or patchwork host '
+            'not whitelisted for {} ({})\n'.format(
+                                    c, upstream_patchworks))
+          self.blacklist.append(c)
+          continue
+      else:
+        upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
+        if not upstream_shas:
+          self.handle_missing_hash_review(c, prefix)
+          continue
+
+        upstream_patch = None
+        upstream_sha = None
+        for s in reversed(upstream_shas):
+          try:
+            upstream_patch = rev.get_commit_from_sha(s)
+            upstream_sha = s
+            break
+          except:
+            continue
+
+        if not upstream_patch:
+          self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
+                                    c, upstream_shas))
+          self.blacklist.append(c)
+          continue
+
+      if prefix != 'FROMLIST':
+        fixes_ref = rev.find_fixes_reference(upstream_sha)
+      else:
+        fixes_ref = None
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
 
