@@ -19,6 +19,8 @@ class LineType(enum.Enum):
   EMPTY = ''
 
 class Reviewer(object):
+  MAX_CONTEXT = 5
+
   def __init__(self, verbose=False, chatty=False, git_dir=None):
     self.verbose = verbose
     self.chatty = chatty
@@ -39,12 +41,13 @@ class Reviewer(object):
         return t
     return None
 
-  def __strip_kruft(self, diff):
+  def __strip_kruft(self, diff, context):
     ret = []
     ignore = [LineType.CHUNK, LineType.GITDIFF, LineType.INDEX,
               LineType.DELETED, LineType.ADDED, LineType.SIMILARITY,
-              LineType.RENAME, LineType.CONTEXT, LineType.EMPTY]
+              LineType.RENAME, LineType.EMPTY]
     include = [LineType.FILE_NEW, LineType.FILE_OLD, LineType.DIFF]
+    ctx_counter = 0
     for l in diff:
       if not l:
         continue
@@ -56,10 +59,25 @@ class Reviewer(object):
 
       if not l_type:
         sys.stderr.write('ERROR: Could not classify line "%s"\n' % l)
-      elif l_type in ignore:
+        ctx_counter = 0
+        continue
+
+      if l_type == LineType.CONTEXT:
+        if ctx_counter < context:
+          ret.append(l)
+        ctx_counter += 1
+        continue
+
+      ctx_counter = 0
+
+      if l_type in ignore:
         continue
       elif l_type in include:
         ret.append(l)
+      else:
+        sys.stderr.write('ERROR: line_type not handled {}: {}\n'.format(l_type,
+                                                                        l))
+
     return ret
 
   def find_fixes_reference(self, sha):
@@ -81,7 +99,8 @@ class Reviewer(object):
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]
 
   def get_commit_from_sha(self, sha):
-    cmd = self.git_cmd + ['show', '--minimal', '-U0', r'--format=%B', sha]
+    cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
+                          r'--format=%B', sha]
     return subprocess.check_output(cmd).decode('UTF-8')
 
   def get_commit_from_remote(self, remote, ref):
@@ -90,15 +109,18 @@ class Reviewer(object):
                           stderr=subprocess.DEVNULL)
     return self.get_commit_from_sha('FETCH_HEAD')
 
-  def compare_diffs(self, a, b):
+  def compare_diffs(self, a, b, context=0):
+    if context > self.MAX_CONTEXT:
+      raise ValueError('Invalid context given')
+
     a = a.split('\n')
     b = b.split('\n')
 
     # strip the commit messages
     a = self.__strip_commit_msg(a) or []
     b = self.__strip_commit_msg(b) or []
-    a = self.__strip_kruft(a)
-    b = self.__strip_kruft(b)
+    a = self.__strip_kruft(a, context)
+    b = self.__strip_kruft(b, context)
 
     ret = []
     diff = difflib.unified_diff(a, b, n=0)

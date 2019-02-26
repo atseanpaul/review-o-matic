@@ -279,7 +279,12 @@ This link is not useful:
       if self.args.verbose:
         print('')
 
-      gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
+      for i in range(0, 4):
+        try:
+          gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
+          break
+        except:
+          continue
 
       upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
       if not upstream_shas:
@@ -304,6 +309,11 @@ This link is not useful:
       fixes_ref = rev.find_fixes_reference(upstream_sha)
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
+
+      # If a BACKPORT appears to be clean, increase the context to be sure
+      # before suggesting switching to UPSTREAM prefix
+      if len(result) == 0 and prefix == 'BACKPORT':
+        result = rev.compare_diffs(upstream_patch, gerrit_patch, context=3)
 
       fields={'sob':False, 'bug':False, 'test':False}
       sob_re = re.compile('Signed-off-by:\s+{}'.format(cur_rev.uploader_name))
