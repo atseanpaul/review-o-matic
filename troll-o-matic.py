@@ -338,8 +338,11 @@ This link is not useful:
         json.dump(self.stats, f)
     print('--')
     summary = '  Summary: '
+    total = 0
     for k,v in self.stats.items():
       summary += '{}={} '.format(k,v)
+      total += v
+    summary += 'total={}'.format(total)
     print(summary)
     print('')
 
