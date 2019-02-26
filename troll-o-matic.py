@@ -94,9 +94,12 @@ patch.
 
 '''
   STRING_FOUND_FIXES_REF='''
-!! NOTE: This patch has been referenced in the Fixes: tag of another commit. If
-!!       you haven't already, consider backporting the following patch:
-!!  {}
+ !! NOTE: This patch has been referenced in the Fixes: tag of another commit. If
+ !!       you haven't already, consider backporting the following patch[es]:'''
+  STRING_FIXES_REF_LINE='''
+ !!  {}'''
+  STRING_FIXES_REF_FOOTER='''
+ !!
 '''
   STRING_FOOTER='''
 ---
@@ -143,7 +146,13 @@ This link is not useful:
     if fixes_ref:
       print('Adding fixes ref for change {}'.format(change.url()))
       self.inc_stat(ReviewType.FIXES_REF)
+      fixes_ref_msg = ''
+      for l in fixes_ref.splitlines():
+        fixes_ref_msg += self.STRING_FIXES_REF_LINE.format(l)
       final_msg += self.STRING_FOUND_FIXES_REF.format(fixes_ref)
+      final_msg += fixes_ref_msg
+      final_msg += self.STRING_FIXES_REF_FOOTER
+
     final_msg += msg
     final_msg += self.STRING_FOOTER
 
