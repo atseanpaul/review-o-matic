@@ -188,7 +188,7 @@ This link is not useful:
       msg += self.STRING_MISSING_FIELDS_DIFF
       msg += self.STRING_UNSUCCESSFUL_FOOTER
       for l in result:
-        msg += '{}\n'.format(l)
+        msg += '  {}\n'.format(l)
 
     self.do_review(ReviewType.MISSING_FIELDS, change, fixes_ref, msg, True, -1)
 
@@ -221,7 +221,7 @@ This link is not useful:
     msg += self.STRING_UNSUCCESSFUL_FOOTER
 
     for l in result:
-      msg += '{}\n'.format(l)
+      msg += '  {}\n'.format(l)
 
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
