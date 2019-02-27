@@ -325,17 +325,20 @@ This link is not useful:
         result = rev.compare_diffs(upstream_patch, gerrit_patch, context=3)
 
       fields={'sob':False, 'bug':False, 'test':False}
-      sob_re = re.compile('Signed-off-by:\s+{}'.format(cur_rev.uploader_name))
+      sob_name_re = re.compile('Signed-off-by:\s+{}'.format(
+                                  cur_rev.uploader_name))
+      sob_email_re = re.compile('Signed-off-by:.*?<{}>'.format(
+                                  cur_rev.uploader_email))
       for l in cur_rev.commit_message.splitlines():
         if l.startswith('BUG='):
           fields['bug'] = True
-          continue
-        if l.startswith('TEST='):
+        elif l.startswith('TEST='):
           fields['test'] = True
-          continue
-        if sob_re.match(l):
+        elif sob_name_re.match(l):
           fields['sob'] = True
-          continue
+        elif sob_email_re.match(l):
+          fields['sob'] = True
+
       if not fields['bug'] or not fields['test'] or not fields['sob']:
         self.handle_missing_fields_review(c, fields, result, fixes_ref)
         continue
