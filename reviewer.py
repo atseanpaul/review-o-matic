@@ -81,8 +81,8 @@ class Reviewer(object):
     return ret
 
   def find_fixes_reference(self, sha):
-    cmd = self.git_cmd + ['log', '--format=oneline', '--abbrev-commit',
-                          '--grep', 'Fixes: {}'.format(sha[:11]),
+    cmd = self.git_cmd + ['log', '--format=oneline', '--abbrev-commit', '-i',
+                          '--grep', 'Fixes:.*{}'.format(sha[:8]),
                           '{}..'.format(sha)]
     return subprocess.check_output(cmd).decode('UTF-8')
 
