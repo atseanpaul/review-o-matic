@@ -446,7 +446,7 @@ This link is not useful:
 
     while True:
       try:
-        prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT']
+        prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
         did_review = False
         for p in prefixes:
           changes = self.get_changes(p)
