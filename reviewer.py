@@ -1,6 +1,7 @@
 import difflib
 import enum
 import re
+import requests
 import subprocess
 import sys
 
@@ -120,8 +121,7 @@ class Reviewer(object):
     if not m or not (m.group(1) in self.PATCHWORK_WHITELIST):
       sys.stderr.write('ERROR: URL "%s"\n' % url)
       return None
-    cmd = ['curl', '-o-', url + 'raw/']
-    return subprocess.check_output(cmd).decode('UTF-8')
+    return requests.get(url + 'raw/').text
 
   def get_commit_from_sha(self, sha):
     cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
