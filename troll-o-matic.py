@@ -261,6 +261,55 @@ This link is not useful:
       sys.stderr.write('\n')
     sys.stderr.write(error)
 
+  def get_upstream_patch_from_patchwork(self,
+                                        change, rev, prefix, gerrit_patch):
+    upstream_patchworks = rev.get_am_from_from_patch(gerrit_patch)
+    if not upstream_patchworks:
+      self.handle_missing_am_review(change, prefix)
+      return None
+
+    upstream_patch = None
+    for u in reversed(upstream_patchworks):
+      try:
+        upstream_patch = rev.get_commit_from_patchwork(u)
+        break
+      except:
+        continue
+
+      if not upstream_patch:
+        self.print_error(
+          'ERROR: patch missing from patchwork, or patchwork host '
+          'not whitelisted for {} ({})\n'.format(change, upstream_patchworks))
+        self.blacklist.append(change)
+        continue
+
+    return upstream_patch
+
+  # Returns a tuple of (upstream_sha, upstream_patch)
+  def get_upstream_patch_from_git(self, change, rev, prefix, gerrit_patch):
+    upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
+    if not upstream_shas:
+      self.handle_missing_hash_review(change, prefix)
+      return (None, None)
+
+    upstream_patch = None
+    upstream_sha = None
+    for s in reversed(upstream_shas):
+      try:
+        upstream_patch = rev.get_commit_from_sha(s)
+        upstream_sha = s
+        break
+      except:
+        continue
+
+      if not upstream_patch:
+        self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
+                                    change, upstream_shas))
+        self.blacklist.append(change)
+      continue
+
+    return (upstream_sha, upstream_patch)
+
   def process_changes(self, prefix, changes):
     rev = Reviewer(git_dir=self.args.git_dir, verbose=self.args.verbose,
                    chatty=self.args.chatty)
@@ -307,52 +356,17 @@ This link is not useful:
           continue
 
       if prefix == 'FROMLIST':
-        upstream_patchworks = rev.get_am_from_from_patch(gerrit_patch)
-        if not upstream_patchworks:
-          self.handle_missing_am_review(c, prefix)
-          continue
-
-        upstream_patch = None
-        for u in reversed(upstream_patchworks):
-          try:
-            upstream_patch = rev.get_commit_from_patchwork(u)
-            break
-          except:
-            continue
-
+        upstream_patch = \
+          self.get_upstream_patch_from_patchwork(c, rev, prefix, gerrit_patch)
         if not upstream_patch:
-          self.print_error(
-            'ERROR: patch missing from patchwork, or patchwork host '
-            'not whitelisted for {} ({})\n'.format(
-                                    c, upstream_patchworks))
-          self.blacklist.append(c)
           continue
-      else:
-        upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
-        if not upstream_shas:
-          self.handle_missing_hash_review(c, prefix)
-          continue
-
-        upstream_patch = None
-        upstream_sha = None
-        for s in reversed(upstream_shas):
-          try:
-            upstream_patch = rev.get_commit_from_sha(s)
-            upstream_sha = s
-            break
-          except:
-            continue
-
-        if not upstream_patch:
-          self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
-                                    c, upstream_shas))
-          self.blacklist.append(c)
-          continue
-
-      if prefix != 'FROMLIST':
-        fixes_ref = rev.find_fixes_reference(upstream_sha)
-      else:
         fixes_ref = None
+      else:
+        upstream_sha, upstream_patch = \
+          self.get_upstream_patch_from_git(c, rev, prefix, gerrit_patch)
+        if not upstream_patch:
+          continue
+        fixes_ref = rev.find_fixes_reference(upstream_sha)
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
 
