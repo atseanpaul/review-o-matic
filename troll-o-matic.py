@@ -147,19 +147,23 @@ This link is not useful:
     self.stats[str(review_type)] += 1
 
   def do_review(self, review_type, change, fixes_ref, msg, notify, vote):
-    final_msg = self.STRING_HEADER
-    if fixes_ref:
-      print('Adding fixes ref for change {}'.format(change.url()))
-      self.inc_stat(ReviewType.FIXES_REF)
-      fixes_ref_msg = ''
-      for l in fixes_ref.splitlines():
-        fixes_ref_msg += self.STRING_FIXES_REF_LINE.format(l)
-      final_msg += self.STRING_FOUND_FIXES_REF.format(fixes_ref)
-      final_msg += fixes_ref_msg
-      final_msg += self.STRING_FIXES_REF_FOOTER
+    if msg:
+      final_msg = self.STRING_HEADER
+      if fixes_ref:
+        print('Adding fixes ref for change {}'.format(change.url()))
+        self.inc_stat(ReviewType.FIXES_REF)
+        fixes_ref_msg = ''
+        for l in fixes_ref.splitlines():
+          fixes_ref_msg += self.STRING_FIXES_REF_LINE.format(l)
+        final_msg += self.STRING_FOUND_FIXES_REF.format(fixes_ref)
+        final_msg += fixes_ref_msg
+        final_msg += self.STRING_FIXES_REF_FOOTER
 
-    final_msg += msg
-    final_msg += self.STRING_FOOTER
+      final_msg += msg
+      final_msg += self.STRING_FOOTER
+    else:
+      final_msg = ""
+      notify = False
 
     self.inc_stat(review_type)
     if not self.args.dry_run:
@@ -235,13 +239,19 @@ This link is not useful:
       msg += self.STRING_UPSTREAM_DIFF
     elif prefix == 'BACKPORT':
       msg += self.STRING_BACKPORT_DIFF
-    elif prefix == 'FROMGIT' or prefix == 'FROMLIST':
+    elif prefix == 'FROMGIT':
+      msg += self.STRING_FROMGIT_DIFF
+    elif prefix == 'FROMLIST':
       msg += self.STRING_FROMGIT_DIFF
 
     msg += self.STRING_UNSUCCESSFUL_FOOTER
 
     for l in result:
       msg += '  {}\n'.format(l)
+
+    # Do not print any message for FROMLIST patches, just remove the vote
+    if prefix == 'FROMLIST':
+      msg = None
 
     print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
           change.url()))
