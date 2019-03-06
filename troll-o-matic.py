@@ -399,8 +399,8 @@ This link is not useful:
         if self.args.verbose:
           print('Finished! Going to sleep until next run')
 
-      except requests.exceptions.HTTPError as e:
-        self.print_error('HTTPError ({})\n'.format(e.response.status_code))
+      except (requests.exceptions.HTTPError, OSError) as e:
+        self.print_error('Error getting changes: ({})\n'.format(str(e)))
         time.sleep(60)
 
       time.sleep(120)
