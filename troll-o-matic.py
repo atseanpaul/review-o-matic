@@ -358,12 +358,17 @@ This link is not useful:
       if self.args.verbose:
         print('')
 
+      gerrit_patch = None
       for i in range(0, 4):
         try:
           gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
           break
         except:
           continue
+      if gerrit_patch == None:
+        self.print_error('ERROR: Could not get gerrit patch {}\n'.format(c))
+        continue
+
 
       if prefix == 'FROMLIST':
         upstream_patch = \
