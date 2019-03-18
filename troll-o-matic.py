@@ -329,7 +329,7 @@ This link is not useful:
     num_changes = len(changes)
     cur_change = 1
     line_feed = False
-    ret = False
+    ret = 0
     for c in changes:
       cur_rev = c.current_revision
 
@@ -356,7 +356,6 @@ This link is not useful:
       if skip and not self.args.force_cl:
         continue
 
-      ret = True
       line_feed = False
       if self.args.verbose:
         print('')
@@ -409,10 +408,12 @@ This link is not useful:
           fields['sob'] = True
 
       if not fields['bug'] or not fields['test'] or not fields['sob']:
+        ret += 1
         self.handle_missing_fields_review(c, prefix, fields, result, fixes_ref)
         continue
 
       if len(result) == 0:
+        ret += 1
         self.handle_successful_review(c, prefix, fixes_ref)
         continue
 
@@ -426,6 +427,7 @@ This link is not useful:
         self.add_change_to_blacklist(c)
         continue
 
+      ret += 1
       self.handle_unsuccessful_review(c, prefix, result, fixes_ref)
 
     if self.args.verbose:
@@ -465,13 +467,13 @@ This link is not useful:
     while True:
       try:
         prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
-        did_review = False
+        did_review = 0
         for p in prefixes:
           changes = self.get_changes(p)
           if self.args.verbose:
             print('{} changes for prefix {}'.format(len(changes), p))
-          did_review |= self.process_changes(p, changes)
-        if did_review:
+          did_review += self.process_changes(p, changes)
+        if did_review > 0:
           self.update_stats()
         if not self.args.daemon:
           break
