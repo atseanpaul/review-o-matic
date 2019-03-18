@@ -149,7 +149,8 @@ This link is not useful:
   def inc_stat(self, review_type):
     self.stats[str(review_type)] += 1
 
-  def do_review(self, review_type, change, fixes_ref, msg, notify, vote):
+  def do_review(self, review_type, change, fixes_ref, msg, notify, vote,
+                dry_run=False):
     final_msg = ""
     if msg:
       final_msg = self.STRING_HEADER
@@ -167,7 +168,7 @@ This link is not useful:
       final_msg += self.STRING_FOOTER
       self.inc_stat(review_type)
 
-    if not self.args.dry_run:
+    if not self.args.dry_run and not dry_run:
       self.gerrit.review(change, self.tag, final_msg, notify,
                          vote_code_review=vote)
     else:
@@ -225,8 +226,10 @@ This link is not useful:
 
   def handle_missing_am_review(self, change,  prefix):
     print('Adding missing am URL for change {}'.format(change.url()))
+    # TODO: There have been a few false positives here, mark it dry_run until
+    #       I sort out what's up
     self.do_review(ReviewType.MISSING_AM, change, None,
-                   self.STRING_MISSING_AM, True, -1)
+                   self.STRING_MISSING_AM, True, -1, dry_run=True)
 
   def clear_previous_votes(self, change):
     self.do_review(ReviewType.CLEAR_VOTES, change, None, None, False, 0)
