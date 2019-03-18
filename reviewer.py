@@ -1,6 +1,7 @@
 import difflib
 import enum
 import re
+import requests
 import subprocess
 import sys
 
@@ -20,6 +21,15 @@ class LineType(enum.Enum):
 
 class Reviewer(object):
   MAX_CONTEXT = 5
+
+  # Whitelisted patchwork hosts
+  PATCHWORK_WHITELIST = [
+    'lore.kernel.org',
+    'patchwork.freedesktop.org',
+    'patchwork.kernel.org',
+    'patchwork.linuxtv.org',
+    'patchwork.ozlabs.org'
+  ]
 
   def __init__(self, verbose=False, chatty=False, git_dir=None):
     self.verbose = verbose
@@ -86,6 +96,13 @@ class Reviewer(object):
                           '{}..'.format(sha)]
     return subprocess.check_output(cmd).decode('UTF-8')
 
+  def get_am_from_from_patch(self, patch):
+    regex = re.compile('\(am from (http.*)\)', flags=re.I)
+    m = regex.findall(patch)
+    if not m or not len(m):
+      return None
+    return m
+
   def get_cherry_pick_shas_from_patch(self, patch):
     regex = re.compile('\(cherry.picked from commit ([0-9a-f]*)', flags=re.I)
     m = regex.findall(patch)
@@ -97,6 +114,14 @@ class Reviewer(object):
     commit_message = subprocess.check_output(['git', 'log', '-1', local_sha]).decode('UTF-8')
     # Use the last SHA found in the patch, since it's (probably) most recent
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]
+
+  def get_commit_from_patchwork(self, url):
+    regex = re.compile('https://([a-z\.]*)/([a-z/]*)/([0-9]*)/')
+    m = regex.match(url)
+    if not m or not (m.group(1) in self.PATCHWORK_WHITELIST):
+      sys.stderr.write('ERROR: URL "%s"\n' % url)
+      return None
+    return requests.get(url + 'raw/').text
 
   def get_commit_from_sha(self, sha):
     cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
