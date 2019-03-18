@@ -188,7 +188,8 @@ This link is not useful:
       self.do_review(ReviewType.SUCCESS, change, fixes_ref, msg, True, 1)
 
 
-  def handle_missing_fields_review(self, change, fields, result, fixes_ref):
+  def handle_missing_fields_review(self, change, prefix, fields, result,
+                                   fixes_ref):
     print('Adding missing fields review for change {}'.format(change.url()))
     missing = []
     if not fields['bug']:
@@ -203,7 +204,7 @@ This link is not useful:
     msg = self.STRING_MISSING_FIELDS.format(', '.join(missing))
     if len(result) == 0:
       msg += self.STRING_MISSING_FIELDS_SUCCESS.format(random.choice(self.SWAG))
-    else:
+    elif prefix != 'FROMLIST':
       msg += self.STRING_MISSING_FIELDS_DIFF
       msg += self.STRING_UNSUCCESSFUL_FOOTER
       for l in result:
@@ -404,7 +405,7 @@ This link is not useful:
           fields['sob'] = True
 
       if not fields['bug'] or not fields['test'] or not fields['sob']:
-        self.handle_missing_fields_review(c, fields, result, fixes_ref)
+        self.handle_missing_fields_review(c, prefix, fields, result, fixes_ref)
         continue
 
       if len(result) == 0:
