@@ -241,8 +241,6 @@ This link is not useful:
       msg += self.STRING_BACKPORT_DIFF
     elif prefix == 'FROMGIT':
       msg += self.STRING_FROMGIT_DIFF
-    elif prefix == 'FROMLIST':
-      msg += self.STRING_FROMGIT_DIFF
 
     msg += self.STRING_UNSUCCESSFUL_FOOTER
 
