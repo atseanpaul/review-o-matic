@@ -376,12 +376,14 @@ This link is not useful:
         upstream_patch = \
           self.get_upstream_patch_from_patchwork(c, rev, prefix, gerrit_patch)
         if not upstream_patch:
+          self.add_change_to_blacklist(c)
           continue
         fixes_ref = None
       else:
         upstream_sha, upstream_patch = \
           self.get_upstream_patch_from_git(c, rev, prefix, gerrit_patch)
         if not upstream_patch:
+          self.add_change_to_blacklist(c)
           continue
         fixes_ref = rev.find_fixes_reference(upstream_sha)
 
