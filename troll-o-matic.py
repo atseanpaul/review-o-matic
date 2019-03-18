@@ -20,6 +20,7 @@ class ReviewType(enum.Enum):
   ALTERED_UPSTREAM = 'altered_upstream'
   MISSING_FIELDS = 'missing_fields'
   MISSING_HASH = 'missing_hash'
+  MISSING_AM = 'missing_am'
   INCORRECT_PREFIX = 'incorrect_prefix'
   FIXES_REF = 'fixes_ref'
   CLEAR_VOTES = 'clear_votes'
@@ -141,6 +142,7 @@ This link is not useful:
                    str(ReviewType.ALTERED_UPSTREAM): 0,
                    str(ReviewType.MISSING_FIELDS): 0,
                    str(ReviewType.MISSING_HASH): 0,
+                   str(ReviewType.MISSING_AM): 0,
                    str(ReviewType.INCORRECT_PREFIX): 0,
                    str(ReviewType.FIXES_REF): 0 }
 
@@ -223,7 +225,7 @@ This link is not useful:
 
   def handle_missing_am_review(self, change,  prefix):
     print('Adding missing am URL for change {}'.format(change.url()))
-    self.do_review(ReviewType.MISSING_HASH, change, None,
+    self.do_review(ReviewType.MISSING_AM, change, None,
                    self.STRING_MISSING_AM, True, -1)
 
   def clear_previous_votes(self, change):
