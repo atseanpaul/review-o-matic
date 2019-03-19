@@ -147,7 +147,13 @@ This link is not useful:
                    str(ReviewType.FIXES_REF): 0 }
 
   def inc_stat(self, review_type):
-    self.stats[str(review_type)] += 1
+    if self.args.dry_run:
+      return
+    key = str(review_type)
+    if not self.stats.get(key):
+      self.stats[key] = 1
+    else:
+      self.stats[key] += 1
 
   def do_review(self, review_type, change, fixes_ref, msg, notify, vote,
                 dry_run=False):
