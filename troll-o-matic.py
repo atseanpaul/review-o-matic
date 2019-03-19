@@ -470,11 +470,13 @@ This link is not useful:
     print('')
 
   def run(self):
+    prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
     if self.args.force_cl:
       c = self.gerrit.get_change(self.args.force_cl)
-      prefix = c.subject.split(':')[0]
       print('Force reviewing change  {}'.format(c))
-      self.process_changes(prefix, [c])
+      for p in prefixes:
+        print('-- Trying prefix {}'.format(p))
+        self.process_changes(p, [c])
       return
 
     if self.args.stats_file:
@@ -486,7 +488,6 @@ This link is not useful:
 
     while True:
       try:
-        prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
         did_review = 0
         for p in prefixes:
           changes = self.get_changes(p)
