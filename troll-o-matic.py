@@ -357,8 +357,15 @@ This link is not useful:
       if self.is_change_in_blacklist(c):
         continue
 
-      if not c.subject.startswith(prefix):
-        continue
+      # Some folks do BACKPORT: FROMLIST: or BACKPORT/FROMLIST, etc and we
+      # shouldn't process these patches as coming from git since we'll fail
+      # on missing hash. So force everything with FROMLIST to go through the
+      # patchwork path (ie: wait until prefix == FROMLIST)
+      if 'FROMLIST' not in c.subject:
+        if not c.subject.startswith(prefix):
+          continue
+      elif prefix != 'FROMLIST':
+          continue
 
       skip = False
       for m in c.messages:
