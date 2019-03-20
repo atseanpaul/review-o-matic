@@ -357,6 +357,10 @@ This link is not useful:
       if self.is_change_in_blacklist(c):
         continue
 
+      # Don't review reverts
+      if c.subject.startswith('Revert '):
+        continue
+
       # Some folks do BACKPORT: FROMLIST: or BACKPORT/FROMLIST, etc and we
       # shouldn't process these patches as coming from git since we'll fail
       # on missing hash. So force everything with FROMLIST to go through the
@@ -388,7 +392,6 @@ This link is not useful:
       if gerrit_patch == None:
         self.print_error('ERROR: Could not get gerrit patch {}\n'.format(c))
         continue
-
 
       if prefix == 'FROMLIST':
         upstream_patch = \
