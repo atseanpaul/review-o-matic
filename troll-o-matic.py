@@ -20,6 +20,7 @@ class ReviewType(enum.Enum):
   ALTERED_UPSTREAM = 'altered_upstream'
   MISSING_FIELDS = 'missing_fields'
   MISSING_HASH = 'missing_hash'
+  INVALID_HASH = 'invalid_hash'
   MISSING_AM = 'missing_am'
   INCORRECT_PREFIX = 'incorrect_prefix'
   FIXES_REF = 'fixes_ref'
@@ -31,6 +32,8 @@ class ReviewType(enum.Enum):
     return str(self)
 
 class Troll(object):
+  TORVALDS_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+
   STRING_HEADER='''
 -- Automated message --
 '''
@@ -72,6 +75,21 @@ form:
 '''
   STRING_MISSING_HASH_FOOTER='''
 Hint: Use the '-x' argument of git cherry-pick to add this automagically
+'''
+  STRING_INVALID_HASH_HEADER='''
+The commit hash(es) you've provided in your commit message could not be found
+upstream. The following were tried:
+'''
+  STRING_INVALID_HASH_LINE='''
+  {}
+    from remote {}
+'''
+  STRING_INVALID_HASH_FOOTER='''
+Please double check your commit hash is valid in the upstream tree.
+'''
+  STRING_INVALID_HASH_FOOTER_FROMGIT='''
+Please double check your commit hash is valid in the upstream tree, and please
+fully specify the remote tree and branch for FROMGIT changes.
 '''
   STRING_MISSING_AM='''
 Your commit message is missing the patchwork URL. It should be in the
@@ -142,6 +160,7 @@ This link is not useful:
                    str(ReviewType.ALTERED_UPSTREAM): 0,
                    str(ReviewType.MISSING_FIELDS): 0,
                    str(ReviewType.MISSING_HASH): 0,
+                   str(ReviewType.INVALID_HASH): 0,
                    str(ReviewType.MISSING_AM): 0,
                    str(ReviewType.INCORRECT_PREFIX): 0,
                    str(ReviewType.FIXES_REF): 0 }
@@ -230,12 +249,28 @@ This link is not useful:
     msg += self.STRING_MISSING_HASH_FOOTER
     self.do_review(ReviewType.MISSING_HASH, change, None, msg, True, -1)
 
+  def handle_invalid_hash_review(self, change, hashes, prefix):
+    print('Adding invalid hash review for change {}'.format(change.url()))
+    msg = self.STRING_INVALID_HASH_HEADER
+    for h in hashes:
+      remote_str = h['remote']
+      if h['branch']:
+        remote_str += ' branch {}'.format(h['branch'])
+      msg += self.STRING_INVALID_HASH_LINE.format(h['sha'], remote_str)
+    if prefix == 'FROMGIT':
+      msg += self.STRING_INVALID_HASH_FOOTER_FROMGIT
+    else:
+      msg += self.STRING_INVALID_HASH_FOOTER
+
+    self.do_review(ReviewType.INVALID_HASH, change, None, msg, True, -1,
+                   dry_run=False)
+
   def handle_missing_am_review(self, change,  prefix):
     print('Adding missing am URL for change {}'.format(change.url()))
     # TODO: There have been a few false positives here, mark it dry_run until
     #       I sort out what's up
     self.do_review(ReviewType.MISSING_AM, change, None,
-                   self.STRING_MISSING_AM, True, -1, dry_run=True)
+                   self.STRING_MISSING_AM, True, -1, dry_run=False)
 
   def clear_previous_votes(self, change):
     self.do_review(ReviewType.CLEAR_VOTES, change, None, None, False, 0)
@@ -319,18 +354,21 @@ This link is not useful:
     upstream_patch = None
     upstream_sha = None
     for s in reversed(upstream_shas):
-      try:
-        upstream_patch = rev.get_commit_from_sha(s)
-        upstream_sha = s
-        break
-      except:
-        continue
+      for i in range(0,1):
+        try:
+          upstream_patch = rev.get_commit_from_sha(s['sha'])
+          upstream_sha = s
+        except:
+          if not s['remote']:
+            s['remote'] = self.TORVALDS_REMOTE
 
-      if not upstream_patch:
-        self.print_error('ERROR: SHA missing from git for {} ({})\n'.format(
-                                    change, upstream_shas))
-        self.add_change_to_blacklist(change)
-      continue
+          rev.fetch_remote(s['remote'], s['branch'])
+          continue
+        break
+
+    if not upstream_patch:
+      self.handle_invalid_hash_review(change, upstream_shas, prefix)
+      return (None, None)
 
     return (upstream_sha, upstream_patch)
 

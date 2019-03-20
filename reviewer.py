@@ -104,16 +104,42 @@ class Reviewer(object):
     return m
 
   def get_cherry_pick_shas_from_patch(self, patch):
-    regex = re.compile('\(cherry.picked from commit ([0-9a-f]*)', flags=re.I)
+    regex = re.compile(
+        '\(cherry.picked from commit ([0-9a-f]*)(?:\s*)(\S*)?(?:\s*)(\S*)?\)',
+        flags=(re.I | re.MULTILINE))
     m = regex.findall(patch)
     if not m or not len(m):
       return None
-    return m
+    ret = []
+    for s in m:
+      ret.append({'sha': s[0],
+                  'remote': s[1] if s[1] else None,
+                  'branch': s[2] if s[2] else None})
+    return ret
+
+  def fetch_remote(self, remote, branch=None):
+    remote_name = re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
+
+    print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
+
+    cmd = self.git_cmd + ['remote', 'add', remote_name, remote]
+    # LAZY: Assuming if this fails the remote already exists
+    subprocess.call(cmd)
+
+    try:
+      cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch or '']
+      subprocess.check_output(cmd).decode('UTF-8')
+    except:
+      cmd = self.git_cmd + ['remote', 'rm', remote_name]
+      subprocess.call(cmd)
+      raise
 
   def get_cherry_pick_sha_from_local_sha(self, local_sha):
-    commit_message = subprocess.check_output(['git', 'log', '-1', local_sha]).decode('UTF-8')
-    # Use the last SHA found in the patch, since it's (probably) most recent
-    return self.get_cherry_pick_shas_from_patch(commit_message)[-1]
+    commit_message = (subprocess.check_output(['git', 'log', '-1', local_sha])
+                        .decode('UTF-8'))
+    # Use the last SHA found in the patch, since it's (probably) most recent,
+    # and only return the SHA, not the remote/branch
+    return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
 
   def get_commit_from_patchwork(self, url):
     regex = re.compile('https://([a-z\.]*)/([a-z/]*)/([0-9]*)/')
@@ -129,7 +155,7 @@ class Reviewer(object):
     return subprocess.check_output(cmd).decode('UTF-8')
 
   def get_commit_from_remote(self, remote, ref):
-    cmd = self.git_cmd + ['fetch', remote, ref]
+    cmd = self.git_cmd + ['fetch', '--prune', remote, ref]
     subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
                           stderr=subprocess.DEVNULL)
     return self.get_commit_from_sha('FETCH_HEAD')
