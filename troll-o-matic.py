@@ -354,17 +354,19 @@ This link is not useful:
     upstream_patch = None
     upstream_sha = None
     for s in reversed(upstream_shas):
-      for i in range(0,1):
-        try:
-          upstream_patch = rev.get_commit_from_sha(s['sha'])
-          upstream_sha = s
-        except:
-          if not s['remote']:
-            s['remote'] = self.TORVALDS_REMOTE
+      if not s['remote']:
+        s['remote'] = self.TORVALDS_REMOTE
+      if not s['branch']:
+        s['branch'] = 'master'
+      s['remote_name'] = rev.generate_remote_name(s['remote'])
 
-          rev.fetch_remote(s['remote'], s['branch'])
-          continue
-        break
+      rev.fetch_remote(s['remote_name'], s['remote'], s['branch'])
+
+      if not rev.is_sha_in_branch(s['sha'], s['remote_name'], s['branch']):
+        continue
+
+      upstream_patch = rev.get_commit_from_sha(s['sha'])
+      upstream_sha = s
 
     if not upstream_patch:
       self.handle_invalid_hash_review(change, upstream_shas, prefix)
@@ -444,7 +446,9 @@ This link is not useful:
         if not upstream_patch:
           self.add_change_to_blacklist(c)
           continue
-        fixes_ref = rev.find_fixes_reference(upstream_sha)
+        fixes_ref = rev.find_fixes_reference(upstream_sha['sha'],
+                                             upstream_sha['remote_name'],
+                                             upstream_sha['branch'])
 
       result = rev.compare_diffs(upstream_patch, gerrit_patch)
 

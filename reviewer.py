@@ -90,10 +90,10 @@ class Reviewer(object):
 
     return ret
 
-  def find_fixes_reference(self, sha):
+  def find_fixes_reference(self, sha, remote_name, branch):
     cmd = self.git_cmd + ['log', '--format=oneline', '--abbrev-commit', '-i',
                           '--grep', 'Fixes:.*{}'.format(sha[:8]),
-                          '{}..'.format(sha)]
+                          '{}..{}/{}'.format(sha, remote_name, branch)]
     return subprocess.check_output(cmd).decode('UTF-8')
 
   def get_am_from_from_patch(self, patch):
@@ -117,21 +117,23 @@ class Reviewer(object):
                   'branch': s[2] if s[2] else None})
     return ret
 
-  def fetch_remote(self, remote, branch=None):
-    remote_name = re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
+  def generate_remote_name(self, remote):
+    return re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
 
+  def fetch_remote(self, remote_name, remote, branch):
     print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
 
     cmd = self.git_cmd + ['remote', 'add', remote_name, remote]
     # LAZY: Assuming if this fails the remote already exists
-    subprocess.call(cmd)
+    subprocess.call(cmd, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
 
     try:
-      cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch or '']
+      cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch]
       subprocess.check_output(cmd).decode('UTF-8')
     except:
       cmd = self.git_cmd + ['remote', 'rm', remote_name]
-      subprocess.call(cmd)
+      subprocess.call(cmd, stdout=subprocess.DEVNULL)
       raise
 
   def get_cherry_pick_sha_from_local_sha(self, local_sha):
@@ -149,7 +151,7 @@ class Reviewer(object):
       return None
     return requests.get(url + 'raw/').text
 
-  def get_commit_from_sha(self, sha):
+  def get_commit_from_sha(self, sha, remote_name, branch):
     cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
                           r'--format=%B', sha]
     return subprocess.check_output(cmd).decode('UTF-8')
