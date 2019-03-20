@@ -78,18 +78,19 @@ Hint: Use the '-x' argument of git cherry-pick to add this automagically
 '''
   STRING_INVALID_HASH_HEADER='''
 The commit hash(es) you've provided in your commit message could not be found
-upstream. The following were tried:
+upstream. The following hash/remote/branch tuple(s) were tried:
 '''
   STRING_INVALID_HASH_LINE='''
   {}
     from remote {}
 '''
   STRING_INVALID_HASH_FOOTER='''
-Please double check your commit hash is valid in the upstream tree.
+Please double check your commit hash is valid in the upstream tree and the hash
+is formatted properly in your commit message (see below):
 '''
   STRING_INVALID_HASH_FOOTER_FROMGIT='''
 Please double check your commit hash is valid in the upstream tree, and please
-fully specify the remote tree and branch for FROMGIT changes.
+fully specify the remote tree and branch for FROMGIT changes (see below):
 '''
   STRING_MISSING_AM='''
 Your commit message is missing the patchwork URL. It should be in the
@@ -259,8 +260,10 @@ This link is not useful:
       msg += self.STRING_INVALID_HASH_LINE.format(h['sha'], remote_str)
     if prefix == 'FROMGIT':
       msg += self.STRING_INVALID_HASH_FOOTER_FROMGIT
+      msg += self.STRING_MISSING_HASH_FMT_FROMGIT
     else:
       msg += self.STRING_INVALID_HASH_FOOTER
+      msg += self.STRING_MISSING_HASH_FMT_UPSTREAM
 
     self.do_review(ReviewType.INVALID_HASH, change, None, msg, True, -1,
                    dry_run=False)
@@ -384,7 +387,7 @@ This link is not useful:
     for c in changes:
       cur_rev = c.current_revision
 
-      if self.args.chatty:
+      if self.args.verbose:
         print('Processing change {}'.format(c.url()))
       elif self.args.verbose:
         sys.stdout.write('{}Processing change {}/{}'.format(

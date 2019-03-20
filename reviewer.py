@@ -105,7 +105,7 @@ class Reviewer(object):
 
   def get_cherry_pick_shas_from_patch(self, patch):
     regex = re.compile(
-        '\(cherry.picked from commit ([0-9a-f]*)(?:\s*)(\S*)?(?:\s*)(\S*)?\)',
+        '\(cherry.picked from commit\s*([0-9a-f]*)(?:\s*)(\S*\://\S*)?(?:\s*)(\S*)?\)',
         flags=(re.I | re.MULTILINE))
     m = regex.findall(patch)
     if not m or not len(m):
@@ -121,7 +121,8 @@ class Reviewer(object):
     return re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
 
   def fetch_remote(self, remote_name, remote, branch):
-    print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
+    if self.verbose:
+      print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
 
     cmd = self.git_cmd + ['remote', 'add', remote_name, remote]
     # LAZY: Assuming if this fails the remote already exists
@@ -130,7 +131,8 @@ class Reviewer(object):
 
     try:
       cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch]
-      subprocess.check_output(cmd).decode('UTF-8')
+      subprocess.call(cmd, stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL)
     except:
       cmd = self.git_cmd + ['remote', 'rm', remote_name]
       subprocess.call(cmd, stdout=subprocess.DEVNULL)
@@ -151,7 +153,17 @@ class Reviewer(object):
       return None
     return requests.get(url + 'raw/').text
 
-  def get_commit_from_sha(self, sha, remote_name, branch):
+  def is_sha_in_branch(self, sha, remote_name, branch):
+    cmd = self.git_cmd + ['log', '--format=%H',
+                          '{}^..{}/{}'.format(sha, remote_name, branch)]
+    try:
+      output = subprocess.check_output(cmd).decode('UTF-8')
+    except:
+      print('Exception encountered running {}'.format(cmd))
+      return False
+    return True if sha in output else False
+
+  def get_commit_from_sha(self, sha):
     cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
                           r'--format=%B', sha]
     return subprocess.check_output(cmd).decode('UTF-8')
