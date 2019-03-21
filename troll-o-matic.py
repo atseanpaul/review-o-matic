@@ -105,7 +105,7 @@ This patch differs from the source commit.
 Since this is an UPSTREAM labeled patch, it shouldn't. Either this reviewing
 script is incorrect (totally possible, pls send patches!), or something changed
 when this was backported. If the backport required changes, please consider
-using the BACKPORT label with a description of you downstream changes in your
+using the BACKPORT label with a description of your downstream changes in your
 commit message.
 '''
   STRING_BACKPORT_DIFF='''
