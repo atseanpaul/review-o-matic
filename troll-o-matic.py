@@ -68,7 +68,7 @@ form:
 '''
   STRING_MISSING_HASH_FMT_FROMGIT='''
     (cherry picked from commit <commit SHA>
-     <remote git url> <remote git tree>)
+     <remote git url> <remote git branch>)
 '''
   STRING_MISSING_HASH_FMT_UPSTREAM='''
     (cherry picked from commit <commit SHA>)
@@ -523,7 +523,8 @@ This link is not useful:
       c = self.gerrit.get_change(self.args.force_cl)
       print('Force reviewing change  {}'.format(c))
       for p in prefixes:
-        print('-- Trying prefix {}'.format(p))
+        if self.args.verbose:
+          print('-- Trying prefix {}'.format(p))
         self.process_changes(p, [c])
       return
 

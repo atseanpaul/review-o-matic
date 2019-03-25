@@ -104,9 +104,43 @@ class Reviewer(object):
     return m
 
   def get_cherry_pick_shas_from_patch(self, patch):
-    regex = re.compile(
-        '\(cherry.picked from commit\s*([0-9a-f]*)(?:\s*)(\S*\://\S*)?(?:\s*)(\S*)?\)',
-        flags=(re.I | re.MULTILINE))
+    # This has pattern has gotten a bit hard to parse, so i'll do my best.
+
+    # Start with an opening paren and allow for whitespace
+    pattern = '\((?:\s*)'
+
+    # This is pretty easy, look the "cherry picked from commit" string taking
+    # into account space or dash between cherry and picked, and allowing for
+    # multiple spaces after commit.
+    pattern = 'cherry.picked from commit\s*'
+
+    # Then we grab the hexidecimal hash string. Everything after this is
+    # optional.
+    pattern += '([0-9a-f]*)'
+
+    # Optionally gobble up everything (including newlines with re.DOTALL) until
+    # we hit the next group. This allows for extra fluff in between the hash and
+    # URL (like an extra 'from' as seen in http://crosreview.com/1537900). The
+    # first ? is because this is an optional group and the second one is to use
+    # a non-greedy algorithm with the .*
+    pattern += '(?:.*?)'
+
+    # This will match the remote url. It's pretty simple, just matches any
+    # protocol (git://, http://, https://, madeup://) and then match all
+    # non-whitespace characters, this is our remote.
+    pattern += '(\S*\://\S*)?'
+
+    # Now that we have the URL, eat any whitespace again
+    pattern += '(?:\s*)'
+
+    # Now assume the next run of non-whitespace characters is the remote branch
+    pattern += '(\S*)?'
+
+    # Finally, account for any whitespace after the branch name and close the
+    # paren
+    pattern += '(?:\s*)\)'
+
+    regex = re.compile(pattern, flags=(re.I | re.MULTILINE | re.DOTALL))
     m = regex.findall(patch)
     if not m or not len(m):
       return None
