@@ -414,6 +414,10 @@ This link is not useful:
       elif prefix != 'FROMLIST':
           continue
 
+      # FIXUP patches shouldn't be considered
+      if c.subject.startswith('FIXUP'):
+        continue
+
       skip = False
       for m in c.messages:
         if m.tag == self.tag and m.revision_num == cur_rev.number:
