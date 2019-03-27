@@ -112,33 +112,42 @@ class Reviewer(object):
     # This is pretty easy, look the "cherry picked from commit" string taking
     # into account space or dash between cherry and picked, and allowing for
     # multiple spaces after commit.
-    pattern = 'cherry.picked from commit\s*'
+    pattern += 'cherry.picked from commit\s*'
 
     # Then we grab the hexidecimal hash string. Everything after this is
     # optional.
     pattern += '([0-9a-f]*)'
+
+    # Wrap the optional group in parens
+    pattern += '('
 
     # Optionally gobble up everything (including newlines with re.DOTALL) until
     # we hit the next group. This allows for extra fluff in between the hash and
     # URL (like an extra 'from' as seen in http://crosreview.com/1537900). The
     # first ? is because this is an optional group and the second one is to use
     # a non-greedy algorithm with the .*
-    pattern += '(?:.*?)'
+    pattern += '.*?'
 
     # This will match the remote url. It's pretty simple, just matches any
     # protocol (git://, http://, https://, madeup://) and then match all
     # non-whitespace characters, this is our remote.
-    pattern += '(\S*\://\S*)?'
+    pattern += '([a-z]*\://\S*)'
 
     # Now that we have the URL, eat any whitespace again
-    pattern += '(?:\s*)'
+    pattern += '\s*'
 
-    # Now assume the next run of non-whitespace characters is the remote branch
+    # Now assume the next run of non-whitespace characters is the remote
+    # branch. Make it optional in case they don't specify remote branch
     pattern += '(\S*)?'
 
-    # Finally, account for any whitespace after the branch name and close the
-    # paren
-    pattern += '(?:\s*)\)'
+    # Close the optional paren around remote/branch
+    pattern += ')?'
+
+    # Finally, account for any trailing whitespace
+    pattern += '\s*'
+
+    # Close the paren
+    pattern += '\)'
 
     regex = re.compile(pattern, flags=(re.I | re.MULTILINE | re.DOTALL))
     m = regex.findall(patch)
@@ -147,8 +156,8 @@ class Reviewer(object):
     ret = []
     for s in m:
       ret.append({'sha': s[0],
-                  'remote': s[1] if s[1] else None,
-                  'branch': s[2] if s[2] else None})
+                  'remote': s[2] if len(s) > 2 else None,
+                  'branch': s[3] if len(s) > 3 else None})
     return ret
 
   def generate_remote_name(self, remote):
@@ -227,4 +236,3 @@ class Reviewer(object):
       ret.append(l)
 
     return ret
-
