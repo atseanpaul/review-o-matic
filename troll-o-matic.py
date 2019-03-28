@@ -98,6 +98,15 @@ differ from the one used to review, there is a higher chance that this diff is
 incorrect. So take this with a grain of salt.
 
 '''
+  CLEAR_VOTES='''
+Changes were detected between this patch and the upstream version referenced in
+the commit message.
+
+Comparing FROMLIST backports is less reliable than UPSTREAM/FROMGIT patches
+since the diff algorithms can differ between developer machine and this
+review script. As such, it's usually not worthwhile posting the diff. Looks like
+you'll have to do this review the old fashioned way!
+'''
   BACKPORT_DIFF='''
 This is expected, and this message is posted to make reviewing backports easier.
 '''
@@ -521,6 +530,7 @@ class FromlistChangeReviewer(ChangeReviewer):
     super().__init__(reviewer, change, dry_run)
     self.strings = FromlistReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+    self.review_backports = False
 
   @staticmethod
   def can_review_change(change):
@@ -539,6 +549,10 @@ class FromlistChangeReviewer(ChangeReviewer):
     msg = self.strings.BACKPORT_FROMLIST
     msg += self.format_diff()
     self.review_result.add_review(ReviewType.BACKPORT, msg)
+
+  def add_clear_votes_review(self):
+    msg = self.strings.CLEAR_VOTES
+    self.review_result.add_review(ReviewType.CLEAR_VOTES, msg)
 
   def get_upstream_patch(self):
     patchwork_url = self.reviewer.get_am_from_from_patch(self.gerrit_patch)
@@ -563,14 +577,18 @@ class FromlistChangeReviewer(ChangeReviewer):
   def compare_patches_clean(self):
     if len(self.diff) == 0:
       self.add_successful_review()
-    else:
+    elif self.review_backports:
       self.add_altered_fromlist_review()
+    else:
+      self.add_clear_votes_review()
 
   def compare_patches_backport(self):
     if len(self.diff) == 0:
       self.add_clean_backport_review()
-    else:
+    elif self.review_backports:
       self.add_fromlist_backport_review()
+    else:
+      self.add_clear_votes_review()
 
 
 class Troll(object):
