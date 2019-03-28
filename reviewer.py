@@ -200,9 +200,9 @@ class Reviewer(object):
     cmd = self.git_cmd + ['log', '--format=%H',
                           '{}^..{}/{}'.format(sha, remote_name, branch)]
     try:
-      output = subprocess.check_output(cmd).decode('UTF-8')
+      output = (subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+                          .decode('UTF-8'))
     except:
-      print('Exception encountered running {}'.format(cmd))
       return False
     return True if sha in output else False
 
