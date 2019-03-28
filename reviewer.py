@@ -189,7 +189,7 @@ class Reviewer(object):
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
 
   def get_commit_from_patchwork(self, url):
-    regex = re.compile('https://([a-z\.]*)/([a-z/]*)/([0-9]*)/')
+    regex = re.compile('https://([a-z\.]*)/([a-z/]*)/([0-9]*)/?')
     m = regex.match(url)
     if not m or not (m.group(1) in self.PATCHWORK_WHITELIST):
       sys.stderr.write('ERROR: URL "%s"\n' % url)
