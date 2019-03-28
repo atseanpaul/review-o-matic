@@ -109,7 +109,6 @@ This is expected, and this message is posted to make reviewing backports easier.
  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''
   FOOTER='''
----
 To learn more about backporting kernel patches to Chromium OS, check out:
   https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
 
@@ -120,13 +119,13 @@ This link is not useful:
   https://thats.poorly.run/
 '''
   ISSUE_SEPARATOR='''
-> ---------------- Issue {}
+>>>>>>> Issue {}
 '''
   FEEDBACK_SEPARATOR='''
-> ---------------- Feedback {}
+>>>>>> Feedback {}
 '''
   REVIEW_SEPARATOR='''
-> ----------------
+------------------
 '''
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
@@ -199,7 +198,7 @@ class ReviewResult(object):
     self.strings = strings
     self.vote = 0
     self.notify = False
-    self.dry_run = True or dry_run # TODO: Change this
+    self.dry_run = dry_run
     self.issues = {}
     self.feedback = {}
 
@@ -260,6 +259,7 @@ class ReviewResult(object):
     if len(self.issues) and len(self.feedback):
       msg += self.strings.REVIEW_SEPARATOR
     msg += self.generate_feedback()
+    msg += self.strings.REVIEW_SEPARATOR
     msg += self.strings.FOOTER
     return msg
 
@@ -467,7 +467,7 @@ class GitChangeReviewer(ChangeReviewer):
   def get_patches(self):
     super().get_patches()
 
-    if self.upstream_sha:
+    if self.upstream_patch and self.upstream_sha:
       fixes_ref = self.reviewer.find_fixes_reference(
                                   self.upstream_sha['sha'],
                                   self.upstream_sha['remote_name'],
@@ -609,10 +609,10 @@ class Troll(object):
       print('------')
       return
 
-    for i in review_result.issues:
+    for i in review.issues:
       self.inc_stat(i)
-    for f in review_result.feedback:
-      self.inc_stat(i)
+    for f in review.feedback:
+      self.inc_stat(f)
     self.gerrit.review(change, self.tag, review.generate_review_message(),
                        review.notify, vote_code_review=review.vote)
 
