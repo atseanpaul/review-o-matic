@@ -14,120 +14,101 @@ import sys
 import time
 import urllib
 
-class ReviewType(enum.Enum):
-  SUCCESS = 'success'
-  BACKPORT = 'backport'
-  ALTERED_UPSTREAM = 'altered_upstream'
-  MISSING_FIELDS = 'missing_fields'
-  MISSING_HASH = 'missing_hash'
-  INVALID_HASH = 'invalid_hash'
-  MISSING_AM = 'missing_am'
-  INCORRECT_PREFIX = 'incorrect_prefix'
-  FIXES_REF = 'fixes_ref'
-  CLEAR_VOTES = 'clear_votes'
-
-  def __str__(self):
-    return self.value
-  def __repr__(self):
-    return str(self)
-
-class Troll(object):
-  TORVALDS_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
-
-  STRING_HEADER='''
+class ReviewStrings(object):
+  HEADER='''
 -- Automated message --
 '''
-  STRING_SUCCESS='''
-This change does not differ from its upstream source. It is certified {}
-by review-o-matic!
+  FOUND_ISSUES_HEADER_SINGLE='''
+The following issue was found with your patch:
 '''
-  STRING_INCORRECT_PREFIX='''
+  FOUND_ISSUES_HEADER_MULTIPLE='''
+The following issues were found with your patch:
+'''
+  SUCCESS='''
+No changes have been detected between this change and its upstream source!
+'''
+  POSITIVE_VOTE='''
+This patch is certified {} by review-o-matic!
+'''
+  CLEAN_BACKPORT_HEADER='''
 This change has a BACKPORT prefix, however it does not differ from its upstream
 source. The BACKPORT prefix should be primarily used for patches which were
 altered during the cherry-pick (due to conflicts or downstream inconsistencies).
-
-Consider changing your subject prefix to UPSTREAM (or FROMGIT/FROMLIST as
-appropriate) to better reflect the contents of this patch.
 '''
-  STRING_MISSING_FIELDS='''
+  MISSING_FIELDS='''
 Your commit message is missing the following required field(s):
     {}
 '''
-  STRING_MISSING_FIELDS_SUCCESS='''
-Don't worry, there is good news! Your patch does not differ from its upstream
-source. Once the missing fields are present, it will be certified {} (or some
-other similarly official-sounding certification) by review-o-matic!
+  FEEDBACK_AFTER_ISSUES='''
+Enough with the bad news! Here's some more feedback on your patch:
 '''
-  STRING_MISSING_FIELDS_DIFF='''
-In addition to the missing fields, this patch differs from its upstream source.
-This may be expected, this message is posted to make reviewing backports easier.
-'''
-  STRING_MISSING_HASH_HEADER='''
+  MISSING_HASH_HEADER='''
 Your commit message is missing the upstream commit hash. It should be in the
 form:
 '''
-  STRING_MISSING_HASH_FMT_FROMGIT='''
-    (cherry picked from commit <commit SHA>
-     <remote git url> <remote git branch>)
-'''
-  STRING_MISSING_HASH_FMT_UPSTREAM='''
-    (cherry picked from commit <commit SHA>)
-'''
-  STRING_MISSING_HASH_FOOTER='''
+  MISSING_HASH_FOOTER='''
 Hint: Use the '-x' argument of git cherry-pick to add this automagically
 '''
-  STRING_INVALID_HASH_HEADER='''
+  INVALID_HASH_HEADER='''
 The commit hash(es) you've provided in your commit message could not be found
 upstream. The following hash/remote/branch tuple(s) were tried:
 '''
-  STRING_INVALID_HASH_LINE='''
+  INVALID_HASH_LINE='''
   {}
     from remote {}
 '''
-  STRING_INVALID_HASH_FOOTER='''
-Please double check your commit hash is valid in the upstream tree and the hash
-is formatted properly in your commit message (see below):
-'''
-  STRING_INVALID_HASH_FOOTER_FROMGIT='''
-Please double check your commit hash is valid in the upstream tree, and please
-fully specify the remote tree and branch for FROMGIT changes (see below):
-'''
-  STRING_MISSING_AM='''
+  MISSING_AM='''
 Your commit message is missing the patchwork URL. It should be in the
 form:
     (am from https://patchwork.kernel.org/.../)
 '''
-  STRING_UNSUCCESSFUL_HEADER='''
+  DIFFERS_HEADER='''
 This patch differs from the source commit.
-
 '''
-  STRING_UPSTREAM_DIFF='''
-Since this is an UPSTREAM labeled patch, it shouldn't. Either this reviewing
+  ALTERED_UPSTREAM='''
+Since this is not labeled as BACKPORT, it shouldn't. Either this reviewing
 script is incorrect (totally possible, pls send patches!), or something changed
 when this was backported. If the backport required changes, please consider
 using the BACKPORT label with a description of your downstream changes in your
-commit message.
-'''
-  STRING_BACKPORT_DIFF='''
-This is expected, and this message is posted to make reviewing backports easier.
-'''
-  STRING_FROMGIT_DIFF='''
-This may be expected, this message is posted to make reviewing backports easier.
-'''
-  STRING_UNSUCCESSFUL_FOOTER='''
+commit message
+
 Below is a diff of the upstream patch referenced in this commit message, vs this
 patch.
 
 '''
-  STRING_FOUND_FIXES_REF='''
+  FROMLIST_DIFFERS_HEADER='''
+Changes have been detected between the patch on the list and this backport.
+Since the diff algorithm used by the developer to generate this patch may
+differ from the one used to review, this could be a false negative.
+'''
+  ALTERED_FROMLIST='''
+If the backport required changes to the FROMLIST patch, please consider adding
+a BACKPORT label to your subject.
+
+Below is the generated diff of the fromlist patch referenced in this commit
+message vs this patch.
+
+'''
+  BACKPORT_FROMLIST='''
+Below is the generated diff of the fromlist patch referenced in this commit
+message vs this patch. This is posted to make reviewing easier, but as
+mentioned above, there is a higher chance of tomfoolery with FROMLIST patches.
+So take this with a grain of salt.
+
+'''
+  BACKPORT_DIFF='''
+This is expected, and this message is posted to make reviewing backports easier.
+'''
+  FOUND_FIXES_REF_HEADER='''
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  !! NOTE: This patch has been referenced in the Fixes: tag of another commit. If
  !!       you haven't already, consider backporting the following patch[es]:'''
-  STRING_FIXES_REF_LINE='''
+  FIXES_REF_LINE='''
  !!  {}'''
-  STRING_FIXES_REF_FOOTER='''
- !!
+  FIXES_REF_FOOTER='''
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''
-  STRING_FOOTER='''
+  FOOTER='''
 ---
 To learn more about backporting kernel patches to Chromium OS, check out:
   https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
@@ -137,6 +118,15 @@ If you're curious about how this message was generated, head over to:
 
 This link is not useful:
   https://thats.poorly.run/
+'''
+  ISSUE_SEPARATOR='''
+> ---------------- Issue {}
+'''
+  FEEDBACK_SEPARATOR='''
+> ---------------- Feedback {}
+'''
+  REVIEW_SEPARATOR='''
+> ----------------
 '''
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
@@ -151,6 +141,439 @@ This link is not useful:
           'Superb', 'Superior', 'Superlative', 'Supernal', 'Swell', 'Terrific',
           'Tip-Top', 'Top Notch', 'Top Shelf', 'Unsurpassed', 'Wonderful']
 
+class UpstreamReviewStrings(ReviewStrings):
+  HASH_EXAMPLE='''
+    (cherry picked from commit <commit SHA>)
+'''
+  INVALID_HASH_FOOTER='''
+Please double check your commit hash is valid in the upstream tree and the hash
+is formatted properly in your commit message (see below):
+'''
+  CLEAN_BACKPORT_FOOTER='''
+Consider changing your subject prefix to UPSTREAM to better reflect the
+contents of this patch.
+'''
+
+class FromgitReviewStrings(ReviewStrings):
+  HASH_EXAMPLE='''
+    (cherry picked from commit <commit SHA>
+     <remote git url> <remote git branch>)
+'''
+  INVALID_HASH_FOOTER='''
+Please double check your commit hash is valid in the upstream tree, and please
+fully specify the remote tree and branch for FROMGIT changes (see below):
+'''
+  CLEAN_BACKPORT_FOOTER='''
+Consider changing your subject prefix to FROMGIT to better reflect the
+contents of this patch.
+'''
+
+class FromlistReviewStrings(ReviewStrings):
+  CLEAN_BACKPORT_FOOTER='''
+Consider changing your subject prefix to FROMLIST to better reflect the
+contents of this patch.
+'''
+
+
+class ReviewType(enum.Enum):
+  FIXES_REF = 'fixes_ref'
+  MISSING_FIELDS = 'missing_fields'
+  MISSING_HASH = 'missing_hash'
+  MISSING_AM = 'missing_am'
+  INVALID_HASH = 'invalid_hash'
+  INCORRECT_PREFIX = 'incorrect_prefix'
+  ALTERED_UPSTREAM = 'altered_upstream'
+  BACKPORT = 'backport'
+  SUCCESS = 'success'
+  CLEAR_VOTES = 'clear_votes'
+
+  def __str__(self):
+    return self.value
+  def __repr__(self):
+    return str(self)
+
+
+class ReviewResult(object):
+  def __init__(self, change, strings, dry_run=False):
+    self.change = change
+    self.strings = strings
+    self.vote = 0
+    self.notify = False
+    self.dry_run = True or dry_run # TODO: Change this
+    self.issues = {}
+    self.feedback = {}
+
+  def add_review(self, review_type, msg, vote=0, notify=False, dry_run=False):
+    # Take the lowest negative, or the highest positive
+    if vote < 0 or self.vote < 0:
+      self.vote = min(self.vote, vote)
+    elif vote > 0 or self.vote > 0:
+      self.vote = max(self.vote, vote)
+    else:
+      self.vote = vote
+
+    if vote < 0:
+      self.issues[review_type] = msg
+    else:
+      self.feedback[review_type] = msg
+
+    self.notify = self.notify or notify
+    self.dry_run = self.dry_run or dry_run
+
+  def generate_issues(self):
+    num_issues = len(self.issues)
+    if not num_issues:
+      return ''
+
+    if num_issues > 1:
+      msg = self.strings.FOUND_ISSUES_HEADER_MULTIPLE
+    else:
+      msg = self.strings.FOUND_ISSUES_HEADER_SINGLE
+
+    for j,i in enumerate(self.issues.values()):
+      if num_issues > 1:
+        msg += self.strings.ISSUE_SEPARATOR.format(j + 1)
+      msg += i
+    return msg
+
+  def generate_feedback(self):
+    num_feedback = len(self.feedback)
+    if not num_feedback:
+      return ''
+
+    if len(self.issues):
+      msg = self.strings.FEEDBACK_AFTER_ISSUES
+    elif self.vote > 0:
+      msg = self.strings.POSITIVE_VOTE.format(random.choice(self.strings.SWAG))
+    else:
+      msg = ''
+
+    for j,f in enumerate(self.feedback.values()):
+      if num_feedback > 1:
+        msg += self.strings.FEEDBACK_SEPARATOR.format(j + 1)
+      msg += f
+    return msg
+
+  def generate_review_message(self):
+    msg = self.strings.HEADER
+    msg += self.generate_issues()
+    if len(self.issues) and len(self.feedback):
+      msg += self.strings.REVIEW_SEPARATOR
+    msg += self.generate_feedback()
+    msg += self.strings.FOOTER
+    return msg
+
+class ChangeReviewer(object):
+  GERRIT_REMOTE = 'cros'
+  def __init__(self, reviewer, change, dry_run):
+    self.reviewer = reviewer
+    self.is_backport = 'BACKPORT' in change.subject
+    self.is_fixup = 'FIXUP' in change.subject
+    self.is_revert = change.subject.startswith('Revert ')
+    self.change = change
+    self.dry_run = dry_run
+    self.gerrit_patch = None
+    self.upstream_patch = None
+    self.review_result = None
+    self.strings = None
+    self.diff = None
+
+  @staticmethod
+  def can_review_change(change):
+    raise NotImplementedError()
+
+  def format_diff(self):
+    msg = ''
+    for l in self.diff:
+      msg += '  {}\n'.format(l)
+    return msg
+
+  def add_successful_review(self):
+    msg = self.strings.SUCCESS.format(random.choice(self.strings.SWAG))
+    self.review_result.add_review(ReviewType.SUCCESS, msg, vote=1, notify=True)
+
+  def add_clean_backport_review(self):
+    msg = self.strings.CLEAN_BACKPORT_HEADER
+    msg += self.strings.CLEAN_BACKPORT_FOOTER
+    self.review_result.add_review(ReviewType.INCORRECT_PREFIX, msg, vote=-1,
+                                  notify=True)
+
+  def add_missing_fields_review(self, fields):
+    missing = []
+    if not fields['bug']:
+      missing.append('BUG=')
+    if not fields['test']:
+      missing.append('TEST=')
+    if not fields['sob']:
+      cur_rev = self.change.current_revision
+      missing.append('Signed-off-by: {} <{}>'.format(cur_rev.uploader_name,
+                                                     cur_rev.uploader_email))
+
+    msg = self.strings.MISSING_FIELDS.format(', '.join(missing))
+    self.review_result.add_review(ReviewType.MISSING_FIELDS, msg, vote=-1,
+                                  notify=True)
+
+  def get_gerrit_patch(self):
+    for i in range(0, 4):
+      try:
+        self.gerrit_patch = self.reviewer.get_commit_from_remote(
+                                  self.GERRIT_REMOTE, self.change.current_revision.ref)
+        return True
+      except:
+        continue
+    raise ValueError('ERROR: Could not get gerrit patch {}\n'.format(
+                                                      self.change))
+
+  def get_upstream_patch(self):
+    raise NotImplementedError()
+
+  def get_patches(self):
+    self.get_gerrit_patch()
+    self.get_upstream_patch()
+
+  def validate_commit_message(self):
+    cur_rev = self.change.current_revision
+    fields={'sob':False, 'bug':False, 'test':False}
+    sob_name_re = re.compile('Signed-off-by:\s+{}'.format(
+                                cur_rev.uploader_name))
+    sob_email_re = re.compile('Signed-off-by:.*?<{}>'.format(
+                                cur_rev.uploader_email))
+    for l in cur_rev.commit_message.splitlines():
+      if l.startswith('BUG='):
+        fields['bug'] = True
+      elif l.startswith('TEST='):
+        fields['test'] = True
+      elif sob_name_re.match(l):
+        fields['sob'] = True
+      elif sob_email_re.match(l):
+        fields['sob'] = True
+
+    if not fields['bug'] or not fields['test'] or not fields['sob']:
+      self.add_missing_fields_review(fields)
+
+  def diff_patches(self, context=0):
+    self.diff = self.reviewer.compare_diffs(self.upstream_patch,
+                                            self.gerrit_patch, context=context)
+
+  def compare_patches_clean(self):
+    raise NotImplementedError()
+
+  def compare_patches_backport(self):
+    raise NotImplementedError()
+
+  def compare_patches(self):
+    if self.is_backport:
+      # If a BACKPORT appears to be clean, increase the context to be sure
+      # before suggesting switching to UPSTREAM prefix
+      if len(self.diff) == 0:
+        self.diff_patches(context=3)
+
+      self.compare_patches_backport()
+    else:
+      self.compare_patches_clean()
+
+  def review_patch(self):
+    # Don't review these patches (yet)
+    if self.is_fixup or self.is_revert:
+      return None
+
+    self.get_patches()
+    self.validate_commit_message()
+    if self.gerrit_patch and self.upstream_patch:
+      self.diff_patches()
+      self.compare_patches()
+
+    if not self.review_result.issues and not self.review_result.feedback:
+      return None
+    return self.review_result
+
+class GitChangeReviewer(ChangeReviewer):
+  DEFAULT_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+  def __init__(self, reviewer, change, dry_run):
+    super().__init__(reviewer, change, dry_run)
+    self.upstream_sha = None
+
+  @staticmethod
+  def can_review_change(change):
+    raise NotImplementedError()
+
+  def add_missing_hash_review(self):
+      msg = self.strings.MISSING_HASH_HEADER
+      msg += self.strings.HASH_EXAMPLE
+      msg += self.strings.MISSING_HASH_FOOTER
+      self.review_result.add_review(ReviewType.MISSING_HASH, msg, vote=-1,
+                                    notify=True)
+
+  def add_invalid_hash_review(self, hashes):
+    msg = self.strings.INVALID_HASH_HEADER
+    for h in hashes:
+      remote_str = h['remote']
+      if h['branch']:
+        remote_str += ' branch {}'.format(h['branch'])
+      msg += self.strings.INVALID_HASH_LINE.format(h['sha'], remote_str)
+    msg += self.strings.INVALID_HASH_FOOTER
+    msg += self.strings.HASH_EXAMPLE
+    self.review_result.add_review(ReviewType.INVALID_HASH, msg, vote=-1,
+                                  notify=True)
+
+  def add_fixes_ref_review(self, fixes_ref):
+    msg = self.strings.FOUND_FIXES_REF_HEADER
+    for l in fixes_ref.splitlines():
+      msg += self.strings.FIXES_REF_LINE.format(l)
+    msg += self.strings.FIXES_REF_FOOTER
+    self.review_result.add_review(ReviewType.FIXES_REF, msg)
+
+  def add_altered_upstream_review(self):
+    msg = self.strings.DIFFERS_HEADER
+    msg += self.strings.ALTERED_UPSTREAM
+    msg += self.format_diff()
+    self.review_result.add_review(ReviewType.ALTERED_UPSTREAM,
+                                  msg, vote=-1, notify=True)
+
+  def add_backport_diff_review(self):
+    msg = self.strings.DIFFERS_HEADER
+    msg += self.strings.BACKPORT_DIFF
+    msg += self.format_diff()
+    self.review_result.add_review(ReviewType.BACKPORT, msg)
+
+  def get_upstream_patch(self):
+    upstream_shas = self.reviewer.get_cherry_pick_shas_from_patch(
+                                    self.gerrit_patch)
+    if not upstream_shas:
+      self.add_missing_hash_review()
+      return
+
+    upstream_sha = None
+    for s in reversed(upstream_shas):
+      if not s['remote']:
+        s['remote'] = self.DEFAULT_REMOTE
+      if not s['branch']:
+        s['branch'] = 'master'
+      s['remote_name'] = self.reviewer.generate_remote_name(s['remote'])
+
+      self.reviewer.fetch_remote(s['remote_name'], s['remote'], s['branch'])
+
+      if not self.reviewer.is_sha_in_branch(s['sha'], s['remote_name'],
+                                            s['branch']):
+        continue
+
+      self.upstream_patch = self.reviewer.get_commit_from_sha(s['sha'])
+      self.upstream_sha = s
+
+    if not self.upstream_patch:
+      self.add_invalid_hash_review(upstream_shas)
+      return
+
+  def get_patches(self):
+    super().get_patches()
+
+    if self.upstream_sha:
+      fixes_ref = self.reviewer.find_fixes_reference(
+                                  self.upstream_sha['sha'],
+                                  self.upstream_sha['remote_name'],
+                                  self.upstream_sha['branch'])
+      if fixes_ref:
+        self.add_fixes_ref_review(fixes_ref)
+
+  def compare_patches_backport(self):
+    if len(self.diff) == 0:
+      self.add_clean_backport_review()
+    else:
+      self.add_backport_diff_review()
+
+  def compare_patches_clean(self):
+    if len(self.diff):
+      self.add_altered_upstream_review()
+    else:
+      self.add_successful_review()
+
+
+class UpstreamChangeReviewer(GitChangeReviewer):
+  def __init__(self, reviewer, change, dry_run):
+    super().__init__(reviewer, change, dry_run)
+    self.strings = UpstreamReviewStrings()
+    self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+
+  @staticmethod
+  def can_review_change(change):
+    # labeled UPSTREAM or labeled BACKPORT
+    return ('UPSTREAM' in change.subject or
+            ('BACKPORT' in change.subject and
+             'FROMGIT' not in change.subject and
+             'FROMLIST' not in change.subject))
+
+
+class FromgitChangeReviewer(GitChangeReviewer):
+  def __init__(self, reviewer, change, dry_run):
+    super().__init__(reviewer, change, dry_run)
+    self.strings = FromgitReviewStrings()
+    self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+
+  @staticmethod
+  def can_review_change(change):
+    return 'FROMGIT' in change.subject
+
+
+class FromlistChangeReviewer(ChangeReviewer):
+  def __init__(self, reviewer, change, dry_run):
+    super().__init__(reviewer, change, dry_run)
+    self.strings = FromlistReviewStrings()
+    self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+
+  @staticmethod
+  def can_review_change(change):
+    return 'FROMLIST' in change.subject
+
+  def add_missing_am_review(self, change):
+    self.review_result.add_review(ReviewType.MISSING_AM,
+                                  self.strings.MISSING_AM, vote=-1, notify=True)
+
+  def add_altered_fromlist_review(self):
+    msg = self.strings.FROMLIST_DIFFERS_HEADER
+    msg += self.strings.ALTERED_FROMLIST
+    msg += self.format_diff()
+    self.review_result.add_review(ReviewType.ALTERED_UPSTREAM, msg)
+
+  def add_fromlist_backport_review(self):
+    msg = self.strings.FROMLIST_DIFFERS_HEADER
+    msg += self.strings.BACKPORT_FROMLIST
+    msg += self.format_diff()
+    self.review_result.add_review(ReviewType.BACKPORT, msg)
+
+  def get_upstream_patch(self):
+    patchwork_url = self.reviewer.get_am_from_from_patch(self.gerrit_patch)
+    if not patchwork_url:
+      self.add_missing_am_review(self.change, prefix)
+      return
+
+    for u in reversed(patchwork_url):
+      try:
+        self.upstream_patch = self.reviewer.get_commit_from_patchwork(u)
+        break
+      except:
+        continue
+
+    if not self.upstream_patch:
+      sys.stderr.write(
+        'ERROR: patch missing from patchwork, or patchwork host '
+        'not whitelisted for {} ({})\n'.format(self.change,
+                                               patchwork_url))
+      return
+
+  def compare_patches_clean(self):
+    if len(self.diff) == 0:
+      self.add_successful_review()
+    else:
+      self.add_altered_fromlist_review()
+
+  def compare_patches_backport(self):
+    if len(self.diff) == 0:
+      self.add_clean_backport_review()
+    else:
+      self.add_fromlist_backport_review()
+
+
+class Troll(object):
   def __init__(self, url, args):
     self.url = url
     self.args = args
@@ -175,135 +598,23 @@ This link is not useful:
     else:
       self.stats[key] += 1
 
-  def do_review(self, review_type, change, fixes_ref, msg, notify, vote,
-                dry_run=False):
-    final_msg = ""
-    if msg:
-      final_msg = self.STRING_HEADER
-      if fixes_ref:
-        print('Adding fixes ref for change {}'.format(change.url()))
-        self.inc_stat(ReviewType.FIXES_REF)
-        fixes_ref_msg = ''
-        for l in fixes_ref.splitlines():
-          fixes_ref_msg += self.STRING_FIXES_REF_LINE.format(l)
-        final_msg += self.STRING_FOUND_FIXES_REF.format(fixes_ref)
-        final_msg += fixes_ref_msg
-        final_msg += self.STRING_FIXES_REF_FOOTER
+  def do_review(self, change, review):
+    print('Review for change: {}'.format(change.url()))
+    print('  Issues: {}, Feedback: {}, Vote:{}, Notify:{}'.format(
+        review.issues.keys(), review.feedback.keys(), review.vote,
+        review.notify))
 
-      final_msg += msg
-      final_msg += self.STRING_FOOTER
-      self.inc_stat(review_type)
-
-    if not self.args.dry_run and not dry_run:
-      self.gerrit.review(change, self.tag, final_msg, notify,
-                         vote_code_review=vote)
-    else:
-      print('Review for change: {}'.format(change.url()))
-      print('  Type:{}, Vote:{}, Notify:{}'.format(review_type, vote, notify))
-      print(final_msg)
+    if review.dry_run:
+      print(review.generate_review_message())
       print('------')
+      return
 
-  def handle_successful_review(self, change, prefix, fixes_ref):
-    # TODO: We should tag FROMLIST: BACKPORT: patches as incorrect, if needed
-    if prefix == 'BACKPORT':
-      print('Adding incorrect prefix review for change {}'.format(change.url()))
-      msg = self.STRING_INCORRECT_PREFIX
-      self.do_review(ReviewType.INCORRECT_PREFIX, change, fixes_ref, msg, True,
-                     0)
-    else:
-      print('Adding successful review for change {}'.format(change.url()))
-      msg = self.STRING_SUCCESS.format(random.choice(self.SWAG))
-      self.do_review(ReviewType.SUCCESS, change, fixes_ref, msg, True, 1)
-
-
-  def handle_missing_fields_review(self, change, prefix, fields, result,
-                                   fixes_ref):
-    print('Adding missing fields review for change {}'.format(change.url()))
-    missing = []
-    if not fields['bug']:
-      missing.append('BUG=')
-    if not fields['test']:
-      missing.append('TEST=')
-    if not fields['sob']:
-      cur_rev = change.current_revision
-      missing.append('Signed-off-by: {} <{}>'.format(cur_rev.uploader_name,
-                                                     cur_rev.uploader_email))
-
-    msg = self.STRING_MISSING_FIELDS.format(', '.join(missing))
-    if len(result) == 0:
-      msg += self.STRING_MISSING_FIELDS_SUCCESS.format(random.choice(self.SWAG))
-    elif prefix != 'FROMLIST':
-      msg += self.STRING_MISSING_FIELDS_DIFF
-      msg += self.STRING_UNSUCCESSFUL_FOOTER
-      for l in result:
-        msg += '  {}\n'.format(l)
-
-    self.do_review(ReviewType.MISSING_FIELDS, change, fixes_ref, msg, True, -1)
-
-  def handle_missing_hash_review(self, change,  prefix):
-    print('Adding missing hash review for change {}'.format(change.url()))
-    msg = self.STRING_MISSING_HASH_HEADER
-    if prefix == 'FROMGIT':
-      msg += self.STRING_MISSING_HASH_FMT_FROMGIT
-    else:
-      msg += self.STRING_MISSING_HASH_FMT_UPSTREAM
-    msg += self.STRING_MISSING_HASH_FOOTER
-    self.do_review(ReviewType.MISSING_HASH, change, None, msg, True, -1)
-
-  def handle_invalid_hash_review(self, change, hashes, prefix):
-    print('Adding invalid hash review for change {}'.format(change.url()))
-    msg = self.STRING_INVALID_HASH_HEADER
-    for h in hashes:
-      remote_str = h['remote']
-      if h['branch']:
-        remote_str += ' branch {}'.format(h['branch'])
-      msg += self.STRING_INVALID_HASH_LINE.format(h['sha'], remote_str)
-    if prefix == 'FROMGIT':
-      msg += self.STRING_INVALID_HASH_FOOTER_FROMGIT
-      msg += self.STRING_MISSING_HASH_FMT_FROMGIT
-    else:
-      msg += self.STRING_INVALID_HASH_FOOTER
-      msg += self.STRING_MISSING_HASH_FMT_UPSTREAM
-
-    self.do_review(ReviewType.INVALID_HASH, change, None, msg, True, -1,
-                   dry_run=False)
-
-  def handle_missing_am_review(self, change,  prefix):
-    print('Adding missing am URL for change {}'.format(change.url()))
-    # TODO: There have been a few false positives here, mark it dry_run until
-    #       I sort out what's up
-    self.do_review(ReviewType.MISSING_AM, change, None,
-                   self.STRING_MISSING_AM, True, -1, dry_run=False)
-
-  def clear_previous_votes(self, change):
-    self.do_review(ReviewType.CLEAR_VOTES, change, None, None, False, 0)
-
-  def handle_unsuccessful_review(self, change, prefix, result, fixes_ref):
-    vote = 0
-    notify = False
-    review_type = ReviewType.BACKPORT
-
-    msg = self.STRING_UNSUCCESSFUL_HEADER
-    if prefix == 'UPSTREAM':
-      review_type = ReviewType.ALTERED_UPSTREAM
-      vote = -1
-      notify = True
-      msg += self.STRING_UPSTREAM_DIFF
-    elif prefix == 'BACKPORT':
-      msg += self.STRING_BACKPORT_DIFF
-    elif prefix == 'FROMGIT':
-      msg += self.STRING_FROMGIT_DIFF
-
-    msg += self.STRING_UNSUCCESSFUL_FOOTER
-
-    for l in result:
-      msg += '  {}\n'.format(l)
-
-    print('Adding unsuccessful review (vote={}) for change {}'.format(vote,
-          change.url()))
-
-    self.do_review(review_type, change, fixes_ref, msg, notify, vote)
-
+    for i in review_result.issues:
+      self.inc_stat(i)
+    for f in review_result.feedback:
+      self.inc_stat(i)
+    self.gerrit.review(change, self.tag, review.generate_review_message(),
+                       review.notify, vote_code_review=review.vote)
 
   def get_changes(self, prefix):
     message = '{}:'.format(prefix)
@@ -312,198 +623,47 @@ This link is not useful:
                     after=after, project='chromiumos/third_party/kernel')
     return changes
 
-  def print_error(self, error):
-    if self.args.verbose:
-      sys.stderr.write('\n')
-    sys.stderr.write(error)
-
   def add_change_to_blacklist(self, change):
     self.blacklist[change.number] = change.current_revision.number
 
   def is_change_in_blacklist(self, change):
     return self.blacklist.get(change.number) == change.current_revision.number
 
-  def get_upstream_patch_from_patchwork(self,
-                                        change, rev, prefix, gerrit_patch):
-    upstream_patchworks = rev.get_am_from_from_patch(gerrit_patch)
-    if not upstream_patchworks:
-      self.handle_missing_am_review(change, prefix)
-      return None
-
-    upstream_patch = None
-    for u in reversed(upstream_patchworks):
-      try:
-        upstream_patch = rev.get_commit_from_patchwork(u)
-        break
-      except:
-        continue
-
-      if not upstream_patch:
-        self.print_error(
-          'ERROR: patch missing from patchwork, or patchwork host '
-          'not whitelisted for {} ({})\n'.format(change, upstream_patchworks))
-        self.add_change_to_blacklist(change)
-        continue
-
-    return upstream_patch
-
-  # Returns a tuple of (upstream_sha, upstream_patch)
-  def get_upstream_patch_from_git(self, change, rev, prefix, gerrit_patch):
-    upstream_shas = rev.get_cherry_pick_shas_from_patch(gerrit_patch)
-    if not upstream_shas:
-      self.handle_missing_hash_review(change, prefix)
-      return (None, None)
-
-    upstream_patch = None
-    upstream_sha = None
-    for s in reversed(upstream_shas):
-      if not s['remote']:
-        s['remote'] = self.TORVALDS_REMOTE
-      if not s['branch']:
-        s['branch'] = 'master'
-      s['remote_name'] = rev.generate_remote_name(s['remote'])
-
-      rev.fetch_remote(s['remote_name'], s['remote'], s['branch'])
-
-      if not rev.is_sha_in_branch(s['sha'], s['remote_name'], s['branch']):
-        continue
-
-      upstream_patch = rev.get_commit_from_sha(s['sha'])
-      upstream_sha = s
-
-    if not upstream_patch:
-      self.handle_invalid_hash_review(change, upstream_shas, prefix)
-      return (None, None)
-
-    return (upstream_sha, upstream_patch)
-
-  def process_changes(self, prefix, changes):
+  def process_changes(self, changes):
     rev = Reviewer(git_dir=self.args.git_dir, verbose=self.args.verbose,
                    chatty=self.args.chatty)
-    num_changes = len(changes)
-    cur_change = 1
-    line_feed = False
     ret = 0
     for c in changes:
-      cur_rev = c.current_revision
-
       if self.args.verbose:
         print('Processing change {}'.format(c.url()))
-      elif self.args.verbose:
-        sys.stdout.write('{}Processing change {}/{}'.format(
-                            '\r' if line_feed else '',
-                            cur_change, num_changes))
-        cur_change += 1
 
-      line_feed = True
-
-      if self.is_change_in_blacklist(c):
-        continue
-
-      # Don't review reverts
-      if c.subject.startswith('Revert '):
-        continue
-
-      # Some folks do BACKPORT: FROMLIST: or BACKPORT/FROMLIST, etc and we
-      # shouldn't process these patches as coming from git since we'll fail
-      # on missing hash. So force everything with FROMLIST to go through the
-      # patchwork path (ie: wait until prefix == FROMLIST)
-      if 'FROMLIST' not in c.subject:
-        if not c.subject.startswith(prefix):
-          continue
-      elif prefix != 'FROMLIST':
-          continue
-
-      # FIXUP patches shouldn't be considered
-      if c.subject.startswith('FIXUP'):
-        continue
-
-      skip = False
+      # Blacklist if we've already reviewed this revision
       for m in c.messages:
-        if m.tag == self.tag and m.revision_num == cur_rev.number:
-          skip = True
-      if skip and not self.args.force_cl:
-        continue
-
-      line_feed = False
-      if self.args.verbose:
-        print('')
-
-      gerrit_patch = None
-      for i in range(0, 4):
-        try:
-          gerrit_patch = rev.get_commit_from_remote('cros', cur_rev.ref)
-          break
-        except:
-          continue
-      if gerrit_patch == None:
-        self.print_error('ERROR: Could not get gerrit patch {}\n'.format(c))
-        continue
-
-      if prefix == 'FROMLIST':
-        upstream_patch = \
-          self.get_upstream_patch_from_patchwork(c, rev, prefix, gerrit_patch)
-        if not upstream_patch:
+        if m.tag == self.tag and m.revision_num == c.current_revision.number:
           self.add_change_to_blacklist(c)
-          continue
-        fixes_ref = None
-      else:
-        upstream_sha, upstream_patch = \
-          self.get_upstream_patch_from_git(c, rev, prefix, gerrit_patch)
-        if not upstream_patch:
-          self.add_change_to_blacklist(c)
-          continue
-        fixes_ref = rev.find_fixes_reference(upstream_sha['sha'],
-                                             upstream_sha['remote_name'],
-                                             upstream_sha['branch'])
 
-      result = rev.compare_diffs(upstream_patch, gerrit_patch)
-
-      # If a BACKPORT appears to be clean, increase the context to be sure
-      # before suggesting switching to UPSTREAM prefix
-      if len(result) == 0 and prefix == 'BACKPORT':
-        result = rev.compare_diffs(upstream_patch, gerrit_patch, context=3)
-
-      fields={'sob':False, 'bug':False, 'test':False}
-      sob_name_re = re.compile('Signed-off-by:\s+{}'.format(
-                                  cur_rev.uploader_name))
-      sob_email_re = re.compile('Signed-off-by:.*?<{}>'.format(
-                                  cur_rev.uploader_email))
-      for l in cur_rev.commit_message.splitlines():
-        if l.startswith('BUG='):
-          fields['bug'] = True
-        elif l.startswith('TEST='):
-          fields['test'] = True
-        elif sob_name_re.match(l):
-          fields['sob'] = True
-        elif sob_email_re.match(l):
-          fields['sob'] = True
-
-      if not fields['bug'] or not fields['test'] or not fields['sob']:
-        ret += 1
-        self.handle_missing_fields_review(c, prefix, fields, result, fixes_ref)
-        continue
-
-      if len(result) == 0:
-        ret += 1
-        self.handle_successful_review(c, prefix, fixes_ref)
-        continue
-
-      if prefix == 'FROMLIST':
-        # Don't print the diff on FROMLIST patches since we can't guarantee
-        # the diff algorithm used to generate the patch will match ours.
-        # Instead, just clear any previous votes we autogenerated in case there
-        # were missing fields/am link.
-        self.clear_previous_votes(c)
-        # Add the patch to the blacklist to avoid doing this on every iteration
+      # Find a reviewer and blacklist if not found
+      reviewer = None
+      if FromlistChangeReviewer.can_review_change(c):
+        reviewer = FromlistChangeReviewer(rev, c, self.args.dry_run)
+      elif FromgitChangeReviewer.can_review_change(c):
+        reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run)
+      elif UpstreamChangeReviewer.can_review_change(c):
+        reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
+      if not reviewer:
         self.add_change_to_blacklist(c)
         continue
 
-      ret += 1
-      self.handle_unsuccessful_review(c, prefix, result, fixes_ref)
+      force_review = self.args.force_cl or self.args.force_all
+      if not force_review and self.is_change_in_blacklist(c):
+        continue
 
-    if self.args.verbose:
-      print('')
+      result = reviewer.review_patch()
+      if result:
+        self.do_review(c, result)
+        ret += 1
+
+      self.add_change_to_blacklist(c)
 
     return ret
 
@@ -522,14 +682,10 @@ This link is not useful:
     print('')
 
   def run(self):
-    prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
     if self.args.force_cl:
       c = self.gerrit.get_change(self.args.force_cl)
       print('Force reviewing change  {}'.format(c))
-      for p in prefixes:
-        if self.args.verbose:
-          print('-- Trying prefix {}'.format(p))
-        self.process_changes(p, [c])
+      self.process_changes([c])
       return
 
     if self.args.stats_file:
@@ -539,6 +695,7 @@ This link is not useful:
       except FileNotFoundError:
         self.update_stats()
 
+    prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
     while True:
       try:
         did_review = 0
@@ -546,7 +703,7 @@ This link is not useful:
           changes = self.get_changes(p)
           if self.args.verbose:
             print('{} changes for prefix {}'.format(len(changes), p))
-          did_review += self.process_changes(p, changes)
+          did_review += self.process_changes(changes)
         if did_review > 0:
           self.update_stats()
         if not self.args.daemon:
@@ -555,7 +712,7 @@ This link is not useful:
           print('Finished! Going to sleep until next run')
 
       except (requests.exceptions.HTTPError, OSError) as e:
-        self.print_error('Error getting changes: ({})\n'.format(str(e)))
+        sys.stderr.write('Error getting changes: ({})\n'.format(str(e)))
         time.sleep(60)
 
       time.sleep(120)
@@ -571,8 +728,13 @@ def main():
   parser.add_argument('--dry-run', action='store_true', default=False,
                       help='skip the review step')
   parser.add_argument('--force-cl', default=None, help='Force review a CL')
+  parser.add_argument('--force-all', action='store_true', default=False,
+                      help='Force review all (implies dry-run)')
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
   args = parser.parse_args()
+
+  if args.force_all:
+    args.dry_run = True
 
   troll = Troll('https://chromium-review.googlesource.com', args)
   troll.run()
