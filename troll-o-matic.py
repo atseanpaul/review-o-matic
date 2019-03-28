@@ -76,12 +76,11 @@ Below is a diff of the upstream patch referenced in this commit message, vs this
 patch.
 
 '''
-  FROMLIST_DIFFERS_HEADER='''
+  ALTERED_FROMLIST='''
 Changes have been detected between the patch on the list and this backport.
 Since the diff algorithm used by the developer to generate this patch may
 differ from the one used to review, this could be a false negative.
-'''
-  ALTERED_FROMLIST='''
+
 If the backport required changes to the FROMLIST patch, please consider adding
 a BACKPORT label to your subject.
 
@@ -91,9 +90,12 @@ message vs this patch.
 '''
   BACKPORT_FROMLIST='''
 Below is the generated diff of the fromlist patch referenced in this commit
-message vs this patch. This is posted to make reviewing easier, but as
-mentioned above, there is a higher chance of tomfoolery with FROMLIST patches.
-So take this with a grain of salt.
+message vs this patch. This message is posted to make reviewing backports
+easier.
+
+Since the diff algorithm used by the developer to generate this patch may
+differ from the one used to review, there is a higher chance that this diff is
+incorrect. So take this with a grain of salt.
 
 '''
   BACKPORT_DIFF='''
@@ -529,14 +531,12 @@ class FromlistChangeReviewer(ChangeReviewer):
                                   self.strings.MISSING_AM, vote=-1, notify=True)
 
   def add_altered_fromlist_review(self):
-    msg = self.strings.FROMLIST_DIFFERS_HEADER
-    msg += self.strings.ALTERED_FROMLIST
+    msg = self.strings.ALTERED_FROMLIST
     msg += self.format_diff()
     self.review_result.add_review(ReviewType.ALTERED_UPSTREAM, msg)
 
   def add_fromlist_backport_review(self):
-    msg = self.strings.FROMLIST_DIFFERS_HEADER
-    msg += self.strings.BACKPORT_FROMLIST
+    msg = self.strings.BACKPORT_FROMLIST
     msg += self.format_diff()
     self.review_result.add_review(ReviewType.BACKPORT, msg)
 
