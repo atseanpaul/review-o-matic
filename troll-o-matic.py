@@ -301,7 +301,7 @@ class ChangeReviewer(object):
 
   def add_successful_review(self):
     msg = self.strings.SUCCESS.format(random.choice(self.strings.SWAG))
-    self.review_result.add_review(ReviewType.SUCCESS, msg, vote=1, notify=True)
+    self.review_result.add_review(ReviewType.SUCCESS, msg, vote=1)
 
   def add_clean_backport_review(self):
     msg = self.strings.CLEAN_BACKPORT_HEADER
@@ -432,7 +432,7 @@ class GitChangeReviewer(ChangeReviewer):
     for l in fixes_ref.splitlines():
       msg += self.strings.FIXES_REF_LINE.format(l)
     msg += self.strings.FIXES_REF_FOOTER
-    self.review_result.add_review(ReviewType.FIXES_REF, msg)
+    self.review_result.add_review(ReviewType.FIXES_REF, msg, notify=True)
 
   def add_altered_upstream_review(self):
     msg = self.strings.DIFFERS_HEADER
