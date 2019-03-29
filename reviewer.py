@@ -121,12 +121,13 @@ class Reviewer(object):
     # Wrap the optional group in parens
     pattern += '('
 
-    # Optionally gobble up everything (including newlines with re.DOTALL) until
-    # we hit the next group. This allows for extra fluff in between the hash and
-    # URL (like an extra 'from' as seen in http://crosreview.com/1537900). The
-    # first ? is because this is an optional group and the second one is to use
-    # a non-greedy algorithm with the .*
-    pattern += '.*?'
+    # Optionally gobble up everything (including newlines) until we hit the next
+    # group. This allows for extra fluff in between the hash and URL (like an
+    # extra 'from' as seen in http://crosreview.com/1537900). Instead of just .*
+    # explicitly forbid matching ) since it could go looking through the source
+    # for a URL (like in http://crosreview.com/1544916). Finally, use a
+    # non-greedy algorithm to avoid gobbling the URL.
+    pattern += '[^\)]*?'
 
     # This will match the remote url. It's pretty simple, just matches any
     # protocol (git://, http://, https://, madeup://) and then match all
