@@ -557,7 +557,7 @@ class FromlistChangeReviewer(ChangeReviewer):
   def get_upstream_patch(self):
     patchwork_url = self.reviewer.get_am_from_from_patch(self.gerrit_patch)
     if not patchwork_url:
-      self.add_missing_am_review(self.change, prefix)
+      self.add_missing_am_review(self.change)
       return
 
     for u in reversed(patchwork_url):
