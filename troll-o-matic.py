@@ -431,6 +431,10 @@ class GitChangeReviewer(ChangeReviewer):
   def can_review_change(change):
     raise NotImplementedError()
 
+  def get_cgit_web_link_path(self):
+    return '/commit/?head={}&id={}'.format(self.upstream_sha['branch'],
+                                           self.upstream_sha['sha'])
+
   def get_upstream_web_link(self):
     remote = self.upstream_sha['remote']
     parsed = urllib.parse.urlparse(remote)
@@ -439,7 +443,7 @@ class GitChangeReviewer(ChangeReviewer):
     if parsed.netloc == 'git.kernel.org':
       l += parsed.netloc
       l += parsed.path
-      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+      l += self.get_cgit_web_link_path()
     elif 'github.com' in parsed.netloc:
       l += parsed.netloc
       l += parsed.path
@@ -447,24 +451,26 @@ class GitChangeReviewer(ChangeReviewer):
     elif 'anongit' in parsed.netloc:
       l += parsed.netloc.replace('anongit', 'cgit')
       l += parsed.path
-      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+      l += self.get_cgit_web_link_path()
     elif 'git.infradead.org' in parsed.netloc:
+      l = 'http://' # whomp whomp
       l += parsed.netloc
       l += parsed.path
       l += '/commit/{}'.format(self.upstream_sha['sha'])
     elif 'linuxtv.org' in parsed.netloc:
       l += 'git.linuxtv.org'
       l += parsed.path
-      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+      l += self.get_cgit_web_link_path()
     else:
-      sys.stderr.write('ERROR: Could not parse web link for {}'.format(remote))
+      sys.stderr.write(
+            'ERROR: Could not parse web link for {}\n'.format(remote))
       return
 
     r = requests.get(l)
     if r.status_code == 200:
       self.review_result.add_web_link(l)
     else:
-      sys.stderr.write('ERROR: Got {} status for {}'.format(r.status_code, l))
+      sys.stderr.write('ERROR: Got {} status for {}\n'.format(r.status_code, l))
       return
 
 
