@@ -121,12 +121,17 @@ This is expected, and this message is posted to make reviewing backports easier.
 '''
   FOOTER='''
 To learn more about backporting kernel patches to Chromium OS, check out:
+
   https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
 
+
 If you're curious about how this message was generated, head over to:
+
   https://github.com/atseanpaul/review-o-matic
 
+
 This link is not useful:
+
   https://thats.poorly.run/
 '''
   ISSUE_SEPARATOR='''
@@ -137,6 +142,12 @@ This link is not useful:
 '''
   REVIEW_SEPARATOR='''
 ------------------
+'''
+  WEB_LINK='''
+If you would like to view the upstream patch on the web, follow this link:
+
+  {}
+
 '''
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
@@ -212,6 +223,7 @@ class ReviewResult(object):
     self.dry_run = dry_run
     self.issues = {}
     self.feedback = {}
+    self.web_link = None
 
   def add_review(self, review_type, msg, vote=0, notify=False, dry_run=False):
     # Take the lowest negative, or the highest positive
@@ -229,6 +241,9 @@ class ReviewResult(object):
 
     self.notify = self.notify or notify
     self.dry_run = self.dry_run or dry_run
+
+  def add_web_link(self, link):
+    self.web_link = link
 
   def generate_issues(self):
     num_issues = len(self.issues)
@@ -271,6 +286,8 @@ class ReviewResult(object):
       msg += self.strings.REVIEW_SEPARATOR
     msg += self.generate_feedback()
     msg += self.strings.REVIEW_SEPARATOR
+    if self.web_link:
+      msg += self.strings.WEB_LINK.format(self.web_link)
     msg += self.strings.FOOTER
     return msg
 
@@ -338,6 +355,9 @@ class ChangeReviewer(object):
   def get_upstream_patch(self):
     raise NotImplementedError()
 
+  def get_upstream_web_link(self):
+    return None
+
   def get_patches(self):
     self.get_gerrit_patch()
     self.get_upstream_patch()
@@ -394,6 +414,9 @@ class ChangeReviewer(object):
       self.diff_patches()
       self.compare_patches()
 
+    if self.upstream_patch:
+      self.get_upstream_web_link()
+
     if not self.review_result.issues and not self.review_result.feedback:
       return None
     return self.review_result
@@ -407,6 +430,43 @@ class GitChangeReviewer(ChangeReviewer):
   @staticmethod
   def can_review_change(change):
     raise NotImplementedError()
+
+  def get_upstream_web_link(self):
+    remote = self.upstream_sha['remote']
+    parsed = urllib.parse.urlparse(remote)
+    l = 'https://'
+
+    if parsed.netloc == 'git.kernel.org':
+      l += parsed.netloc
+      l += parsed.path
+      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+    elif 'github.com' in parsed.netloc:
+      l += parsed.netloc
+      l += parsed.path
+      l += '/commit/{}'.format(self.upstream_sha['sha'])
+    elif 'anongit' in parsed.netloc:
+      l += parsed.netloc.replace('anongit', 'cgit')
+      l += parsed.path
+      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+    elif 'git.infradead.org' in parsed.netloc:
+      l += parsed.netloc
+      l += parsed.path
+      l += '/commit/{}'.format(self.upstream_sha['sha'])
+    elif 'linuxtv.org' in parsed.netloc:
+      l += 'git.linuxtv.org'
+      l += parsed.path
+      l += '/commit/?id={}'.format(self.upstream_sha['sha'])
+    else:
+      sys.stderr.write('ERROR: Could not parse web link for {}'.format(remote))
+      return
+
+    r = requests.get(l)
+    if r.status_code == 200:
+      self.review_result.add_web_link(l)
+    else:
+      sys.stderr.write('ERROR: Got {} status for {}'.format(r.status_code, l))
+      return
+
 
   def add_missing_hash_review(self):
       msg = self.strings.MISSING_HASH_HEADER
