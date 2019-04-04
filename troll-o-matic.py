@@ -121,18 +121,13 @@ This is expected, and this message is posted to make reviewing backports easier.
 '''
   FOOTER='''
 To learn more about backporting kernel patches to Chromium OS, check out:
-
-  https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
-
+https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
 
 If you're curious about how this message was generated, head over to:
-
-  https://github.com/atseanpaul/review-o-matic
-
+https://github.com/atseanpaul/review-o-matic
 
 This link is not useful:
-
-  https://thats.poorly.run/
+https://thats.poorly.run/
 '''
   ISSUE_SEPARATOR='''
 >>>>>>> Issue {}
@@ -145,9 +140,7 @@ This link is not useful:
 '''
   WEB_LINK='''
 If you would like to view the upstream patch on the web, follow this link:
-
-  {}
-
+{}
 '''
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
