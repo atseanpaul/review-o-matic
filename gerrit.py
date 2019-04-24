@@ -4,6 +4,16 @@ from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
 import pprint
 import urllib
 
+class AuthFromNetrc(HTTPBasicAuthFromNetrc):
+  def __init__(self, url, use_internal):
+    # This is a nasty little hack, that is probably going to be forgotten the
+    # next time my .netrc file goes away. If we want an "internal" login,
+    # append '.internal' to the host of the internal login in your .netrc file
+    if use_internal:
+      parsed = urllib.parse.urlsplit(url)
+      url = parsed.scheme + '://' + parsed.netloc + '.internal' + parsed.path
+    super().__init__(url)
+
 class GerritMessage(object):
   def __init__(self, rest):
     # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-message-info
@@ -56,8 +66,6 @@ class GerritChange(object):
     self.__parse_votes(rest, self.vote_code_review, 'Code-Review')
     self.vote_commit_queue = []
     self.__parse_votes(rest, self.vote_commit_queue, 'Commit-Queue')
-    self.vote_trybot_ready = []
-    self.__parse_votes(rest, self.vote_trybot_ready, 'Trybot-Ready')
     self.vote_verified = []
     self.__parse_votes(rest, self.vote_verified, 'Verified')
 
@@ -94,15 +102,11 @@ class GerritChange(object):
     return 1 in self.vote_verified
 
   def is_cq_ready(self):
-    return 1 in self.vote_commit_queue
-
-  def is_trybot_ready(self):
-    return 1 in self.vote_trybot_ready
-
+    return 1 in self.vote_commit_queue or 2 in self.vote_commit_queue
 
 class Gerrit(object):
-  def __init__(self, url):
-    auth = HTTPBasicAuthFromNetrc(url=url)
+  def __init__(self, url, use_internal=False):
+    auth = AuthFromNetrc(url, use_internal)
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
     self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS',
@@ -156,7 +160,7 @@ class Gerrit(object):
     return self.rest.get(uri)
 
   def review(self, change, tag, message, notify_owner, vote_code_review=None,
-             vote_verified=None, vote_cq_ready=None, vote_trybot_ready=None):
+             vote_verified=None, vote_cq_ready=None):
     review = {
         'tag': tag,
         'message': message,
@@ -170,8 +174,6 @@ class Gerrit(object):
       labels['Verified'] = vote_verified
     if vote_cq_ready != None:
       labels['Commit-Queue'] = vote_cq_ready
-    if vote_trybot_ready != None:
-      labels['Trybot-Ready'] = vote_trybot_ready
 
     if labels:
       review['labels'] = labels
