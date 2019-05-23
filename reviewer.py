@@ -34,6 +34,7 @@ class Reviewer(object):
   def __init__(self, verbose=False, chatty=False, git_dir=None):
     self.verbose = verbose
     self.chatty = chatty
+    self.git_dir = git_dir
     if git_dir:
       self.git_cmd = ['git', '-C', git_dir ]
     else:
@@ -181,6 +182,29 @@ class Reviewer(object):
       cmd = self.git_cmd + ['remote', 'rm', remote_name]
       subprocess.call(cmd, stdout=subprocess.DEVNULL)
       raise
+
+  def checkout(self, remote, branch, commit='FETCH_HEAD'):
+    cmd = self.git_cmd + ['fetch', '--prune', remote, branch]
+    if self.verbose:
+      print("Running {}".format(" ".join(cmd)))
+
+    subprocess.call(cmd, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
+
+    cmd = self.git_cmd + ['checkout', commit]
+    if self.verbose:
+      print("Running {}".format(" ".join(cmd)))
+
+    subprocess.call(cmd, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
+
+  def checkout_reset(self, path):
+    cmd = self.git_cmd + ['checkout', '--', path]
+    if self.verbose:
+      print('Running {}'.format(' '.join(cmd)))
+
+    subprocess.call(cmd, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
 
   def get_cherry_pick_sha_from_local_sha(self, local_sha):
     commit_message = (subprocess.check_output(['git', 'log', '-1', local_sha])
