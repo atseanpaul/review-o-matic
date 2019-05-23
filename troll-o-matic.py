@@ -2,6 +2,7 @@
 
 from reviewer import Reviewer
 from gerrit import Gerrit, GerritRevision, GerritMessage
+from configchecker import KernelConfigChecker
 
 import argparse
 import datetime
@@ -188,6 +189,11 @@ Consider changing your subject prefix to FROMLIST to better reflect the
 contents of this patch.
 '''
 
+class ChromiumReviewStrings(ReviewStrings):
+  CONFIG_DIFFS='''
+Just thought you might like to know the kernel configs have changed in the
+following way:
+'''
 
 class ReviewType(enum.Enum):
   FIXES_REF = 'fixes_ref'
@@ -200,6 +206,7 @@ class ReviewType(enum.Enum):
   BACKPORT = 'backport'
   SUCCESS = 'success'
   CLEAR_VOTES = 'clear_votes'
+  KCONFIG_CHANGE = 'kconfig_change'
 
   def __str__(self):
     return self.value
@@ -649,6 +656,40 @@ class FromlistChangeReviewer(ChangeReviewer):
     else:
       self.add_clear_votes_review()
 
+class ChromiumChangeReviewer(ChangeReviewer):
+  def __init__(self, reviewer, change, dry_run, verbose):
+    super().__init__(reviewer, change, dry_run)
+    self.strings = ChromiumReviewStrings()
+    self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+    self.review_backports = False
+    self.verbose = verbose
+    self.config_diff = None
+
+  @staticmethod
+  def can_review_change(change):
+    return 'CHROMIUM' in change.subject
+
+  def get_gerrit_patch(self):
+    super().get_gerrit_patch()
+    kconfigchecker = KernelConfigChecker(reviewer=self.reviewer,
+                                         verbose=self.verbose)
+
+    if kconfigchecker.is_config_change(self.gerrit_patch):
+      self.config_diff = kconfigchecker.get_kernel_configs(self.GERRIT_REMOTE,
+                                      self.change.current_revision.ref)
+
+    if self.config_diff:
+      self.add_config_change_review()
+
+    return None
+
+  def get_upstream_patch(self):
+    return None
+
+  def add_config_change_review(self):
+    msg = self.strings.CONFIG_DIFFS
+    msg += self.config_diff
+    self.review_result.add_review(ReviewType.KCONFIG_CHANGE, msg)
 
 class Troll(object):
   def __init__(self, url, args):
@@ -727,6 +768,8 @@ class Troll(object):
         reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run)
       elif UpstreamChangeReviewer.can_review_change(c):
         reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
+      elif self.args.kconfig_hound and ChromiumChangeReviewer.can_review_change(c):
+        reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run, self.args.verbose)
       if not reviewer:
         self.add_change_to_blacklist(c)
         continue
@@ -773,6 +816,9 @@ class Troll(object):
         self.update_stats()
 
     prefixes = ['UPSTREAM', 'BACKPORT', 'FROMGIT', 'FROMLIST']
+    if self.args.kconfig_hound:
+      prefixes += ['CHROMIUM']
+
     while True:
       try:
         did_review = 0
@@ -808,6 +854,8 @@ def main():
   parser.add_argument('--force-all', action='store_true', default=False,
                       help='Force review all (implies dry-run)')
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
+  parser.add_argument('--kconfig-hound', default=None, action='store_true',
+    help='Compute and post the total difference for kconfig changes')
   args = parser.parse_args()
 
   if args.force_all:
