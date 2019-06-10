@@ -768,8 +768,10 @@ class Troll(object):
         reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run)
       elif UpstreamChangeReviewer.can_review_change(c):
         reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
-      elif self.args.kconfig_hound and ChromiumChangeReviewer.can_review_change(c):
-        reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run, self.args.verbose)
+      elif self.args.kconfig_hound and \
+          ChromiumChangeReviewer.can_review_change(c):
+        reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run,
+                                          self.args.verbose)
       if not reviewer:
         self.add_change_to_blacklist(c)
         continue

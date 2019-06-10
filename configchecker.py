@@ -1,6 +1,5 @@
 import errno
-import glob
-import os
+from pathlib import Path
 import shutil
 import subprocess
 
@@ -8,14 +7,16 @@ class KernelConfigChecker():
   def __init__(self, verbose=False, reviewer=None):
     self.reviewer = reviewer
     self.verbose = verbose
-    self.config_cmd = 'chromeos/scripts/kernelconfig'
-    self.kernel_dir = '.'
-    self.genconfig_dir = 'CONFIGS'
+    self.kernel_dir = Path()
     if self.reviewer.git_dir:
-      self.kernel_dir = self.reviewer.git_dir
-      self.config_cmd = '%s/%s' % (self.kernel_dir, self.config_cmd)
-      self.genconfig_dir = '%s/%s' % \
-                            (self.kernel_dir, self.genconfig_dir)
+      self.kernel_dir = Path(self.reviewer.git_dir)
+    if not self.kernel_dir.is_dir():
+      raise ValueError('{} is not a directory!'.format(self.kernel_dir))
+
+    self.config_cmd = self.kernel_dir.joinpath('chromeos/scripts/kernelconfig')
+    self.genconfig_dir = self.kernel_dir.joinpath('CONFIGS')
+    if not self.genconfig_dir.is_dir():
+      self.genconfig_dir.mkdir()
 
   def is_config_change(self, patch):
       # Running the kernelconfig script is a little slow, so for now
@@ -23,7 +24,7 @@ class KernelConfigChecker():
       return '+++ b/chromeos/config' in patch
 
   def create_kernel_configs(self):
-      cmd = [self.config_cmd, 'genconfig']
+      cmd = [str(self.config_cmd), 'genconfig']
       if self.verbose:
         print('Running {}'.format(' '.join(cmd)))
 
@@ -34,16 +35,10 @@ class KernelConfigChecker():
     if self.verbose:
       print('Moving configs from {} to {}'.format(self.genconfig_dir, dest))
 
-    try:
-      os.makedirs(dest)
-    except OSError as exc:
-      if exc.errno == errno.EEXIST and os.path.isdir(dest):
-          pass
-      else:
-          raise
-
-    for filename in glob.glob(self.genconfig_dir + '/*.config'):
-      shutil.copy(filename, dest)
+    if not dest.is_dir():
+      dest.mkdir()
+    for filename in self.genconfig_dir.glob('*.config'):
+      shutil.copy(str(filename), str(dest))
 
   def rmdir_recursive(self, dir):
     if self.verbose:
@@ -100,14 +95,14 @@ class KernelConfigChecker():
     # kernel configs.
     self.checkout_commit(remote, ref, 'FETCH_HEAD~1')
     self.create_kernel_configs()
-    orig_dir = self.kernel_dir + '/configs_orig'
+    orig_dir = self.kernel_dir.joinpath('configs_orig')
     self.move_genconfigs(orig_dir)
 
     # Now check out the CL, and generate the full configs.
     self.reviewer.checkout_reset('chromeos/config')
     self.checkout_commit(remote, ref, 'FETCH_HEAD')
     self.create_kernel_configs()
-    new_dir = self.kernel_dir + '/configs_new'
+    new_dir = self.kernel_dir.joinpath('configs_new')
     self.move_genconfigs(new_dir)
 
     # Compare the two configs against each other.
@@ -115,13 +110,13 @@ class KernelConfigChecker():
     if self.verbose:
       print('Running {}'.format(' '.join(cmd)))
 
-    proc = subprocess.Popen(cmd, cwd=self.kernel_dir, stdout=subprocess.PIPE)
+    proc = subprocess.Popen(cmd, cwd=str(self.kernel_dir), stdout=subprocess.PIPE)
     kconfig_diff = proc.communicate()[0].decode('UTF-8')
     kconfig_diff = self.streamline_hunks(kconfig_diff)
 
     # Clean up
     self.reviewer.checkout_reset('chromeos/config')
-    self.rmdir_recursive(orig_dir)
-    self.rmdir_recursive(new_dir)
-    self.rmdir_recursive(self.genconfig_dir)
+    self.rmdir_recursive(str(orig_dir))
+    self.rmdir_recursive(str(new_dir))
+    self.rmdir_recursive(str(self.genconfig_dir))
     return kconfig_diff
