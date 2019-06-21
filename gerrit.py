@@ -28,9 +28,10 @@ class GerritRevision(object):
     self.id = id
     self.ref = rest['ref']
     self.number = rest['_number']
-    self.commit_message = ''.join(rest['commit_with_footers'])
     self.uploader_name = ''.join(rest['uploader']['name'])
     self.uploader_email = ''.join(rest['uploader']['email'])
+    if rest.get('commit_with_footers'):
+      self.commit_message = ''.join(rest['commit_with_footers'])
 
   def __eq__(self, other):
     return self.id == other.id and self.number == other.number
@@ -57,6 +58,10 @@ class GerritChange(object):
     self.current_revision = GerritRevision(
             rest['current_revision'],
             rest['revisions'][rest['current_revision']])
+
+    self.revisions = []
+    for r in rest['revisions']:
+      self.revisions.append(GerritRevision(r, rest['revisions'][r]))
 
     self.messages = []
     for m in rest['messages']:
@@ -112,10 +117,30 @@ class Gerrit(object):
     self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS',
                            'DETAILED_ACCOUNTS', 'COMMIT_FOOTERS']
 
-  def get_change(self, change_id):
-    uri = '/changes/{}?o={}'.format(change_id, '&o='.join(self.change_options))
+  def get_change(self, change_id, rev_num=None):
+    options = self.change_options
+    if rev_num != None:
+      options += ['ALL_REVISIONS']
+    uri = '/changes/{}?o={}'.format(change_id, '&o='.join(options))
+
     rest = self.rest.get(uri)
-    return GerritChange(self.url, rest)
+    c = GerritChange(self.url, rest)
+
+    # The modifications to change here shouldn't be relied upon, but rolling
+    # back to a previous revision is useful for testing. So we'll do our best
+    # to act like the requested revision is the current_revision and hope
+    # nothing downstream of us gets too confused
+    if rev_num != None:
+      uri = '/changes/{}/revisions/{}/commit'.format(change_id, rev_num)
+      rest = self.rest.get(uri)
+      for r in c.revisions:
+        if int(r.number) != int(rev_num):
+          continue
+        r.commit_message = rest['message']
+        c.subject = rest['subject']
+        c.current_revision = r
+
+    return c
 
   def get_related_changes(self, change):
     uri = '/changes/{}/revisions/current/related'.format(change.id)

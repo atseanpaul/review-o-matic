@@ -132,7 +132,7 @@ class Troll(object):
 
   def run(self):
     if self.args.force_cl:
-      c = self.gerrit.get_change(self.args.force_cl)
+      c = self.gerrit.get_change(self.args.force_cl, self.args.force_rev)
       print('Force reviewing change  {}'.format(c))
       self.process_changes([c])
       return
@@ -180,6 +180,9 @@ def main():
   parser.add_argument('--dry-run', action='store_true', default=False,
                       help='skip the review step')
   parser.add_argument('--force-cl', default=None, help='Force review a CL')
+  parser.add_argument('--force-rev', default=None,
+                      help=('Specify a specific revision of the force-cl to '
+                           'review (ignored if force-cl is not true)'))
   parser.add_argument('--force-all', action='store_true', default=False,
                       help='Force review all (implies dry-run)')
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
