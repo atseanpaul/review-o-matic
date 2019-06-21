@@ -7,6 +7,8 @@ import urllib
 
 class GitChangeReviewer(ChangeReviewer):
   DEFAULT_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
+  DEFAULT_BRANCH='master'
+
   def __init__(self, reviewer, change, dry_run):
     super().__init__(reviewer, change, dry_run)
     self.upstream_sha = None
@@ -109,7 +111,7 @@ class GitChangeReviewer(ChangeReviewer):
       if not s['remote']:
         s['remote'] = self.DEFAULT_REMOTE
       if not s['branch']:
-        s['branch'] = 'master'
+        s['branch'] = self.DEFAULT_BRANCH
       s['remote_name'] = self.reviewer.generate_remote_name(s['remote'])
 
       self.reviewer.fetch_remote(s['remote_name'], s['remote'], s['branch'])
