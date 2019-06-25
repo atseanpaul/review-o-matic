@@ -32,7 +32,8 @@ class Troll(object):
                    str(ReviewType.MISSING_AM): 0,
                    str(ReviewType.INCORRECT_PREFIX): 0,
                    str(ReviewType.FIXES_REF): 0,
-                   str(ReviewType.KCONFIG_CHANGE): 0 }
+                   str(ReviewType.KCONFIG_CHANGE): 0,
+                   str(ReviewType.IN_MAINLINE): 0 }
 
   def inc_stat(self, review_type):
     if self.args.dry_run:

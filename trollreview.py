@@ -13,6 +13,7 @@ class ReviewType(enum.Enum):
   SUCCESS = 'success'
   CLEAR_VOTES = 'clear_votes'
   KCONFIG_CHANGE = 'kconfig_change'
+  IN_MAINLINE = 'in_mainline'
 
   def __str__(self):
     return self.value
