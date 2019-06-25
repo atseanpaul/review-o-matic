@@ -83,21 +83,25 @@ class Troll(object):
       if self.args.verbose:
         print('Processing change {}'.format(c.url()))
 
-      # Blacklist if we've already reviewed this revision
+      days_since_last_review = None
       for m in c.messages:
         if m.tag == self.tag and m.revision_num == c.current_revision.number:
-          self.add_change_to_blacklist(c)
+          days_since_last_review = (datetime.datetime.utcnow() - m.date).days
+
+      if self.args.verbose and days_since_last_review != None:
+        print('    Reviewed {} days ago'.format(days_since_last_review))
 
       # Find a reviewer and blacklist if not found
       reviewer = None
-      if FromlistChangeReviewer.can_review_change(c):
+      if FromlistChangeReviewer.can_review_change(c, days_since_last_review):
         reviewer = FromlistChangeReviewer(rev, c, self.args.dry_run)
-      elif FromgitChangeReviewer.can_review_change(c):
-        reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run)
-      elif UpstreamChangeReviewer.can_review_change(c):
+      elif FromgitChangeReviewer.can_review_change(c, days_since_last_review):
+        reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run,
+                                         days_since_last_review)
+      elif UpstreamChangeReviewer.can_review_change(c, days_since_last_review):
         reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
       elif self.args.kconfig_hound and \
-          ChromiumChangeReviewer.can_review_change(c):
+          ChromiumChangeReviewer.can_review_change(c, days_since_last_review):
         reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run,
                                           self.args.verbose)
       if not reviewer:

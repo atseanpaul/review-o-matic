@@ -22,9 +22,10 @@ class UpstreamChangeReviewer(GitChangeReviewer):
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
 
   @staticmethod
-  def can_review_change(change):
+  def can_review_change(change, days_since_last_review):
     # labeled UPSTREAM or labeled BACKPORT
-    return ('UPSTREAM' in change.subject or
-            ('BACKPORT' in change.subject and
-             'FROMGIT' not in change.subject and
-             'FROMLIST' not in change.subject))
+    return (days_since_last_review == None and
+            ('UPSTREAM' in change.subject or
+             ('BACKPORT' in change.subject and
+              'FROMGIT' not in change.subject and
+              'FROMLIST' not in change.subject)))

@@ -14,7 +14,7 @@ class GitChangeReviewer(ChangeReviewer):
     self.upstream_sha = None
 
   @staticmethod
-  def can_review_change(change):
+  def can_review_change(change, days_since_last_review):
     raise NotImplementedError()
 
   def get_cgit_web_link_path(self):

@@ -4,6 +4,9 @@ from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
 import pprint
 import urllib
 
+def parse_gerrit_timestamp(ts):
+  return datetime.strptime(ts[:-10], '%Y-%m-%d %H:%M:%S')
+
 class AuthFromNetrc(HTTPBasicAuthFromNetrc):
   def __init__(self, url, use_internal):
     # This is a nasty little hack, that is probably going to be forgotten the
@@ -21,6 +24,7 @@ class GerritMessage(object):
     self.revision_num = rest['_revision_number']
     self.tag = rest.get('tag')
     self.message = rest['message']
+    self.date = parse_gerrit_timestamp(rest['date'])
 
 class GerritRevision(object):
   def __init__(self, id, rest):
@@ -50,8 +54,7 @@ class GerritChange(object):
     self.change_id = rest['change_id']
     self.number = rest['_number']
     # yyyy-mm-dd hh:mm:ss.fffffffff
-    self.last_updated = datetime.strptime(rest['updated'][:-10],
-                                          '%Y-%m-%d %H:%M:%S')
+    self.last_updated = parse_gerrit_timestamp(rest['updated'])
     self.status = rest['status']
     self.subject = rest['subject']
     self.project = rest['project']

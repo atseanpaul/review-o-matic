@@ -23,14 +23,16 @@ UPSTREAM.
 '''
 
 class FromgitChangeReviewer(GitChangeReviewer):
-  def __init__(self, reviewer, change, dry_run):
+  def __init__(self, reviewer, change, dry_run, days_since_last_review):
     super().__init__(reviewer, change, dry_run)
     self.strings = FromgitReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
+    self.days_since_last_review = days_since_last_review
 
   @staticmethod
-  def can_review_change(change):
-    return 'FROMGIT' in change.subject
+  def can_review_change(change, days_since_last_review):
+    return ('FROMGIT' in change.subject and
+            (days_since_last_review == None or days_since_last_review >= 14))
 
   def add_patch_in_mainline_review(self):
     self.review_result.add_review(ReviewType.IN_MAINLINE,
@@ -48,3 +50,13 @@ class FromgitChangeReviewer(GitChangeReviewer):
                                         self.DEFAULT_BRANCH):
         self.add_patch_in_mainline_review()
         return
+
+  def review_patch(self):
+    result = super().review_patch()
+
+    # Only re-review patches if we're adding an IN_MAINLINE review
+    if (self.days_since_last_review != None and
+        ReviewType.IN_MAINLINE not in result.issues):
+      return None
+
+    return result

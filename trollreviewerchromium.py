@@ -19,8 +19,8 @@ class ChromiumChangeReviewer(ChangeReviewer):
     self.config_diff = None
 
   @staticmethod
-  def can_review_change(change):
-    return 'CHROMIUM' in change.subject
+  def can_review_change(change, days_since_last_review):
+    return days_since_last_review == None and 'CHROMIUM' in change.subject
 
   def get_gerrit_patch(self):
     super().get_gerrit_patch()

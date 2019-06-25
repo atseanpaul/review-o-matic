@@ -19,7 +19,7 @@ class ChangeReviewer(object):
     self.diff = None
 
   @staticmethod
-  def can_review_change(change):
+  def can_review_change(change, days_since_last_review):
     raise NotImplementedError()
 
   def format_diff(self):

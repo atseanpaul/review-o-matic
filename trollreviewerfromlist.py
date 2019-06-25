@@ -19,8 +19,8 @@ class FromlistChangeReviewer(ChangeReviewer):
     self.review_backports = False
 
   @staticmethod
-  def can_review_change(change):
-    return 'FROMLIST' in change.subject
+  def can_review_change(change, days_since_last_review):
+    return days_since_last_review == None and 'FROMLIST' in change.subject
 
   def add_missing_am_review(self, change):
     self.review_result.add_review(ReviewType.MISSING_AM,
