@@ -11,7 +11,7 @@ class LineType(enum.Enum):
   ADDED = 'new file mode '
   FILE_OLD = '--- (?:a/)?(.*)'
   FILE_NEW = '\+\+\+ (?:b/)?(.*)'
-  CHUNK = '@@ '
+  CHUNK = '@@ -?([0-9]+),?([0-9]+)? \+?([0-9]+),?([0-9]+)? @@(.*)'
   DIFF = '[+-]'
   SIMILARITY = 'similarity index ([0-9]+)%'
   RENAME = 'rename (from|to) (.*)'
@@ -36,10 +36,11 @@ class Reviewer(object):
       if regex.match(l):
         return patch[i:]
 
-  def __classify_line(self, line):
+  def classify_line(self, line):
     for t in LineType:
-      if re.match(t.value, line):
-        return t
+      m = re.match(t.value, line)
+      if m:
+        return (t,m)
     return None
 
   def __strip_kruft(self, diff, context):
@@ -53,7 +54,7 @@ class Reviewer(object):
       if not l:
         continue
 
-      l_type = self.__classify_line(l)
+      l_type,_ = self.classify_line(l)
 
       if self.chatty:
         print('%s- "%s"' % (l_type, l))

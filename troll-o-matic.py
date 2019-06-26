@@ -32,7 +32,8 @@ class Troll(object):
                    str(ReviewType.INCORRECT_PREFIX): 0,
                    str(ReviewType.FIXES_REF): 0,
                    str(ReviewType.KCONFIG_CHANGE): 0,
-                   str(ReviewType.IN_MAINLINE): 0 }
+                   str(ReviewType.IN_MAINLINE): 0,
+                   str(ReviewType.UPSTREAM_COMMENTS): 0 }
 
   def inc_stat(self, review_type):
     if self.args.dry_run:
@@ -51,6 +52,14 @@ class Troll(object):
 
     if review.dry_run:
       print(review.generate_review_message())
+      if review.inline_comments:
+        print('')
+        print('-- Inline comments:')
+        for f,comments in review.inline_comments.items():
+          for c in comments:
+            print('{}:{}'.format(f, c['line']))
+            print(c['message'])
+
       print('------')
       return
 
@@ -59,7 +68,8 @@ class Troll(object):
     for f in review.feedback:
       self.inc_stat(f)
     self.gerrit.review(change, self.tag, review.generate_review_message(),
-                       review.notify, vote_code_review=review.vote)
+                       review.notify, vote_code_review=review.vote,
+                       inline_comments=review.inline_comments)
 
   def get_changes(self, prefix):
     message = '{}:'.format(prefix)
@@ -82,10 +92,13 @@ class Troll(object):
       if self.args.verbose:
         print('Processing change {}'.format(c.url()))
 
+      force_review = self.args.force_cl or self.args.force_all
+
       days_since_last_review = None
-      for m in c.messages:
-        if m.tag == self.tag and m.revision_num == c.current_revision.number:
-          days_since_last_review = (datetime.datetime.utcnow() - m.date).days
+      if not force_review:
+        for m in c.messages:
+          if m.tag == self.tag and m.revision_num == c.current_revision.number:
+            days_since_last_review = (datetime.datetime.utcnow() - m.date).days
 
       if self.args.verbose and days_since_last_review != None:
         print('    Reviewed {} days ago'.format(days_since_last_review))
@@ -107,7 +120,6 @@ class Troll(object):
         self.add_change_to_blacklist(c)
         continue
 
-      force_review = self.args.force_cl or self.args.force_all
       if not force_review and self.is_change_in_blacklist(c):
         continue
 
@@ -152,6 +164,9 @@ class Troll(object):
     if self.args.kconfig_hound:
       prefixes += ['CHROMIUM']
 
+    if self.args.force_prefix:
+      prefixes = [self.args.force_prefix]
+
     while True:
       try:
         did_review = 0
@@ -189,6 +204,8 @@ def main():
                            'review (ignored if force-cl is not true)'))
   parser.add_argument('--force-all', action='store_true', default=False,
                       help='Force review all (implies dry-run)')
+  parser.add_argument('--force-prefix', default=None,
+                      help='Only search for the provided prefix')
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
   parser.add_argument('--kconfig-hound', default=None, action='store_true',
     help='Compute and post the total difference for kconfig changes')

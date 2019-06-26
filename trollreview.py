@@ -14,6 +14,7 @@ class ReviewType(enum.Enum):
   CLEAR_VOTES = 'clear_votes'
   KCONFIG_CHANGE = 'kconfig_change'
   IN_MAINLINE = 'in_mainline'
+  UPSTREAM_COMMENTS = 'upstream_comments'
 
   def __str__(self):
     return self.value
@@ -31,6 +32,7 @@ class ReviewResult(object):
     self.issues = {}
     self.feedback = {}
     self.web_link = None
+    self.inline_comments = {}
 
   def add_review(self, review_type, msg, vote=0, notify=False, dry_run=False):
     # Take the lowest negative, or the highest positive
@@ -48,6 +50,11 @@ class ReviewResult(object):
 
     self.notify = self.notify or notify
     self.dry_run = self.dry_run or dry_run
+
+  def add_inline_comment(self, new_file, line, comment):
+    if not self.inline_comments.get(new_file):
+      self.inline_comments[new_file] = []
+    self.inline_comments[new_file].append({"line": line, "message": comment})
 
   def add_web_link(self, link):
     self.web_link = link

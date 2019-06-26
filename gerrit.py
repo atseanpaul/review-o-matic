@@ -188,7 +188,7 @@ class Gerrit(object):
     return self.rest.get(uri)
 
   def review(self, change, tag, message, notify_owner, vote_code_review=None,
-             vote_verified=None, vote_cq_ready=None):
+             vote_verified=None, vote_cq_ready=None, inline_comments=None):
     review = {
         'tag': tag,
         'message': message,
@@ -206,7 +206,11 @@ class Gerrit(object):
     if labels:
       review['labels'] = labels
 
+    if inline_comments:
+      review['comments'] = inline_comments
+
     #pprint.PrettyPrinter(indent=4).pprint(review)
+    #pprint.PrettyPrinter(indent=4).pprint(json.dumps(review))
     return self.rest.review(change.id, change.current_revision.id,
                             json.dumps(review))
 
