@@ -1,3 +1,4 @@
+from patchwork import PatchworkPatch
 from trollreview import ReviewResult
 from trollreview import ReviewType
 from trollreviewer import ChangeReviewer
@@ -17,6 +18,7 @@ class FromlistChangeReviewer(ChangeReviewer):
     self.strings = FromlistReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.review_backports = False
+    self.patchwork_patch = None
 
   @staticmethod
   def can_review_change(change, days_since_last_review):
@@ -48,7 +50,9 @@ class FromlistChangeReviewer(ChangeReviewer):
 
     for u in reversed(patchwork_url):
       try:
-        self.upstream_patch = self.reviewer.get_commit_from_patchwork(u)
+        patchwork_patch = PatchworkPatch(u)
+        self.upstream_patch = patchwork_patch.get_patch()
+        self.patchwork_patch = patchwork_patch
         break
       except:
         continue

@@ -1,11 +1,8 @@
 import difflib
 import enum
-import pathlib
 import re
-import requests
 import subprocess
 import sys
-import urllib
 
 class LineType(enum.Enum):
   GITDIFF = 'diff --git '
@@ -23,15 +20,6 @@ class LineType(enum.Enum):
 
 class Reviewer(object):
   MAX_CONTEXT = 5
-
-  # Whitelisted patchwork hosts
-  PATCHWORK_WHITELIST = [
-    'lore.kernel.org',
-    'patchwork.freedesktop.org',
-    'patchwork.kernel.org',
-    'patchwork.linuxtv.org',
-    'patchwork.ozlabs.org'
-  ]
 
   def __init__(self, verbose=False, chatty=False, git_dir=None):
     self.verbose = verbose
@@ -214,25 +202,6 @@ class Reviewer(object):
     # Use the last SHA found in the patch, since it's (probably) most recent,
     # and only return the SHA, not the remote/branch
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
-
-  def parse_patchwork_url(self, url):
-    ret = urllib.parse.urlparse(url)
-    m = re.match('/([a-z/]*)/([0-9]*)/?', ret.path)
-    if not m or not m.group(2):
-      sys.stderr.write('ERROR: Malformed patchwork URL "%s"\n' % url)
-      return (None, None)
-    if ret.netloc not in self.PATCHWORK_WHITELIST:
-      sys.stderr.write('ERROR: Patchwork host not whitelisted "%s"\n' % url)
-      return (None, None)
-    return (ret, m.group(2))
-
-  def get_commit_from_patchwork(self, url):
-    pw_url,_ = self.parse_patchwork_url(url)
-    if not pw_url:
-      return None
-
-    patch_url = pw_url._replace(path=str(pathlib.PurePath(pw_url.path, 'raw')))
-    return requests.get(patch_url.geturl()).text
 
   def is_sha_in_branch(self, sha, remote_name, branch):
     cmd = self.git_cmd + ['log', '--format=%H',
