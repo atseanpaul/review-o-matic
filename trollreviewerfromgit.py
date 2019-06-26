@@ -49,7 +49,6 @@ class FromgitChangeReviewer(GitChangeReviewer):
       if self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
                                         self.DEFAULT_BRANCH):
         self.add_patch_in_mainline_review()
-        return
 
   def review_patch(self):
     result = super().review_patch()
