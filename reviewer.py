@@ -238,6 +238,8 @@ class Reviewer(object):
 
   def get_commit_from_remote(self, remote, ref):
     cmd = self.git_cmd + ['fetch', '--prune', remote, ref]
+    if self.verbose:
+      print("Running {}".format(" ".join(cmd)))
     subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
                           stderr=subprocess.DEVNULL)
     return self.get_commit_from_sha('FETCH_HEAD')
