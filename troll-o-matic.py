@@ -2,7 +2,6 @@
 
 from reviewer import Reviewer
 from gerrit import Gerrit, GerritRevision, GerritMessage
-from configchecker import KernelConfigChecker
 
 from trollreview import ReviewType
 from trollreviewerfromgit import FromgitChangeReviewer

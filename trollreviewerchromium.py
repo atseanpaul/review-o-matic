@@ -1,3 +1,4 @@
+from configchecker import KernelConfigChecker
 from trollreview import ReviewResult
 from trollreview import ReviewType
 from trollreviewer import ChangeReviewer
