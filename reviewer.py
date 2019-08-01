@@ -185,7 +185,7 @@ class Reviewer(object):
     self.git(cmd, CallType.CALL)
 
     try:
-      cmd = ['fetch', '--prune', remote_name, branch]
+      cmd = ['fetch', '--prune', remote_name, 'refs/heads/' + branch]
       self.git(cmd, CallType.CALL)
     except:
       cmd = ['remote', 'rm', remote_name]
@@ -193,7 +193,7 @@ class Reviewer(object):
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
-    cmd = ['fetch', '--prune', remote, branch]
+    cmd = ['fetch', '--prune', remote, 'refs/heads/' + branch]
     if self.verbose:
       print("Running {}".format(" ".join(cmd)))
 
