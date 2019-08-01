@@ -18,6 +18,11 @@ class LineType(enum.Enum):
   CONTEXT = ' '
   EMPTY = ''
 
+class CallType(enum.Enum):
+  CHECK_OUTPUT = 0
+  CHECK_CALL = 1
+  CALL = 2
+
 class Reviewer(object):
   MAX_CONTEXT = 5
 
@@ -82,11 +87,26 @@ class Reviewer(object):
 
     return ret
 
+  def git(self, cmd, call_type, stdout=subprocess.DEVNULL,
+          stderr=subprocess.DEVNULL):
+    run_cmd = self.git_cmd + cmd
+    if self.verbose:
+      print('GIT: {}'.format(' '.join(run_cmd)))
+    if call_type == CallType.CHECK_OUTPUT:
+      return subprocess.check_output(run_cmd, stderr=stderr).decode('UTF-8')
+    elif call_type == CallType.CHECK_CALL:
+      subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)
+    elif call_type == CallType.CALL:
+      subprocess.call(run_cmd, stdout=stdout, stderr=stderr)
+    else:
+      raise ValueError('Invalid call type {}'.format(call_type))
+    return None
+
   def find_fixes_reference(self, sha, remote_name, branch):
-    cmd = self.git_cmd + ['log', '--format=oneline', '--abbrev-commit', '-i',
-                          '--grep', 'Fixes:.*{}'.format(sha[:8]),
-                          '{}..{}/{}'.format(sha, remote_name, branch)]
-    return subprocess.check_output(cmd).decode('UTF-8')
+    cmd = ['log', '--format=oneline', '--abbrev-commit', '-i', '--grep',
+           'Fixes:.*{}'.format(sha[:8]), '{}..{}/{}'.format(sha, remote_name,
+           branch)]
+    return self.git(cmd, CallType.CHECK_OUTPUT)
 
   def get_am_from_from_patch(self, patch):
     regex = re.compile('\(am from (http.*)\)', flags=re.I)
@@ -160,71 +180,63 @@ class Reviewer(object):
     if self.verbose:
       print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
 
-    cmd = self.git_cmd + ['remote', 'add', remote_name, remote]
+    cmd = ['remote', 'add', remote_name, remote]
     # LAZY: Assuming if this fails the remote already exists
-    subprocess.call(cmd, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
+    self.git(cmd, CallType.CALL)
 
     try:
-      cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch]
-      subprocess.call(cmd, stdout=subprocess.DEVNULL,
-                      stderr=subprocess.DEVNULL)
+      cmd = ['fetch', '--prune', remote_name, branch]
+      self.git(cmd, CallType.CALL)
     except:
-      cmd = self.git_cmd + ['remote', 'rm', remote_name]
-      subprocess.call(cmd, stdout=subprocess.DEVNULL)
+      cmd = ['remote', 'rm', remote_name]
+      self.git(cmd, CallType.CALL, stderr=None)
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
-    cmd = self.git_cmd + ['fetch', '--prune', remote, branch]
+    cmd = ['fetch', '--prune', remote, branch]
     if self.verbose:
       print("Running {}".format(" ".join(cmd)))
 
-    subprocess.call(cmd, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
+    self.git(cmd, CallType.CALL)
 
-    cmd = self.git_cmd + ['checkout', commit]
+    cmd = ['checkout', commit]
     if self.verbose:
       print("Running {}".format(" ".join(cmd)))
 
-    subprocess.call(cmd, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
+    self.git(cmd, CallType.CALL)
 
   def checkout_reset(self, path):
-    cmd = self.git_cmd + ['checkout', '--', path]
+    cmd = ['checkout', '--', path]
     if self.verbose:
       print('Running {}'.format(' '.join(cmd)))
 
-    subprocess.call(cmd, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
+    self.git(cmd, CallType.CALL)
 
   def get_cherry_pick_sha_from_local_sha(self, local_sha):
-    commit_message = (subprocess.check_output(['git', 'log', '-1', local_sha])
-                        .decode('UTF-8'))
+    cmd = ['log', '-1', local_sha]
+
+    commit_message = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
     # Use the last SHA found in the patch, since it's (probably) most recent,
     # and only return the SHA, not the remote/branch
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
 
   def is_sha_in_branch(self, sha, remote_name, branch):
-    cmd = self.git_cmd + ['log', '--format=%H',
-                          '{}^..{}/{}'.format(sha, remote_name, branch)]
+    cmd = ['log', '--format=%H', '{}^..{}/{}'.format(sha, remote_name, branch)]
     try:
-      output = (subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
-                          .decode('UTF-8'))
+      output = self.git(cmd, CallType.CHECK_OUTPUT)
     except:
       return False
     return True if sha in output else False
 
   def get_commit_from_sha(self, sha):
-    cmd = self.git_cmd + ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT),
-                          r'--format=%B', sha]
-    return subprocess.check_output(cmd).decode('UTF-8')
+    cmd = ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT), r'--format=%B',
+           sha]
+    ret = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
+    return ret
 
   def get_commit_from_remote(self, remote, ref):
-    cmd = self.git_cmd + ['fetch', '--prune', remote, ref]
-    if self.verbose:
-      print("Running {}".format(" ".join(cmd)))
-    subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL)
+    cmd = ['fetch', '--prune', remote, ref]
+    self.git(cmd, CallType.CHECK_CALL)
     return self.get_commit_from_sha('FETCH_HEAD')
 
   def compare_diffs(self, a, b, context=0):
