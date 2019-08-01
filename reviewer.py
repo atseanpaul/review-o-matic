@@ -166,7 +166,8 @@ class Reviewer(object):
                     stderr=subprocess.DEVNULL)
 
     try:
-      cmd = self.git_cmd + ['fetch', '--prune', remote_name, branch]
+      cmd = self.git_cmd + ['fetch', '--prune', remote_name,
+                            'refs/heads/' + branch ]
       subprocess.call(cmd, stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL)
     except:
@@ -175,7 +176,8 @@ class Reviewer(object):
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
-    cmd = self.git_cmd + ['fetch', '--prune', remote, branch]
+    cmd = self.git_cmd + ['fetch', '--prune', remote,
+                          'refs/heads/' + branch ]
     if self.verbose:
       print("Running {}".format(" ".join(cmd)))
 
