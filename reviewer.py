@@ -253,7 +253,7 @@ class Reviewer(object):
     b = self.__strip_kruft(b, context)
 
     files = {'new': '', 'old': ''}
-    print_files = {'new': '', 'old': ''}
+    printed_files = False
 
     ret = []
     differ = difflib.Differ()
@@ -261,24 +261,25 @@ class Reviewer(object):
       # strip the differ margin for analyzing the line
       line = l[2:]
 
+      print(l)
+
       # if this is a file line, save the file for later printing
       l_type,_ = self.classify_line(line)
-      if l_type == LineType.FILE_NEW:
-        files['new'] = line
-      elif l_type == LineType.FILE_OLD:
+      if l_type == LineType.FILE_OLD:
         files['old'] = line
+        continue # old always comes before new, so loop around to pick up new
+      elif l_type == LineType.FILE_NEW:
+        files['new'] = line
+        printed_files = False
 
       # discard the differ '?' helper and unchanged lines
       if l[0] == '?' or not l[:2].strip():
         continue
 
-      # print the files if they have changed
-      if files['new'] != print_files['new']:
-        print_files['new'] = files['new']
-        ret.append(print_files['new'])
-      if files['old'] != print_files['old']:
-        print_files['old'] = files['old']
-        ret.append(print_files['old'])
+      if not printed_files:
+        ret.append(files['old'])
+        ret.append(files['new'])
+        printed_files = True
 
       # don't double print files
       if l_type == LineType.FILE_NEW or l_type == LineType.FILE_OLD:
