@@ -15,6 +15,7 @@ class ReviewType(enum.Enum):
   KCONFIG_CHANGE = 'kconfig_change'
   IN_MAINLINE = 'in_mainline'
   UPSTREAM_COMMENTS = 'upstream_comments'
+  NOT_IN_MAINLINE = 'not_in_mainline'
 
   def __str__(self):
     return self.value

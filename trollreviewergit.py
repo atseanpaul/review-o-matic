@@ -127,6 +127,16 @@ class GitChangeReviewer(ChangeReviewer):
       self.add_invalid_hash_review(upstream_shas)
       return
 
+  def is_sha_in_mainline(self):
+    if not self.upstream_sha:
+      return False
+
+    remote_name = self.reviewer.generate_remote_name(self.DEFAULT_REMOTE)
+    self.reviewer.fetch_remote(remote_name, self.DEFAULT_REMOTE,
+                               self.DEFAULT_BRANCH)
+    return self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
+                                          self.DEFAULT_BRANCH)
+
   def get_patches(self):
     super().get_patches()
 

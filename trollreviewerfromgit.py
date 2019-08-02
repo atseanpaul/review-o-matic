@@ -42,13 +42,8 @@ class FromgitChangeReviewer(GitChangeReviewer):
   def get_upstream_patch(self):
     super().get_upstream_patch()
 
-    if self.upstream_patch and self.upstream_sha:
-      remote = self.DEFAULT_REMOTE
-      remote_name = self.reviewer.generate_remote_name(remote)
-      self.reviewer.fetch_remote(remote_name, remote, self.DEFAULT_BRANCH)
-      if self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
-                                        self.DEFAULT_BRANCH):
-        self.add_patch_in_mainline_review()
+    if self.is_sha_in_mainline():
+      self.add_patch_in_mainline_review()
 
   def review_patch(self):
     result = super().review_patch()
