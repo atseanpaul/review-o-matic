@@ -261,8 +261,6 @@ class Reviewer(object):
       # strip the differ margin for analyzing the line
       line = l[2:]
 
-      print(l)
-
       # if this is a file line, save the file for later printing
       l_type,_ = self.classify_line(line)
       if l_type == LineType.FILE_OLD:
