@@ -126,6 +126,15 @@ class FromlistChangeReviewer(ChangeReviewer):
 
     for l in diff:
       t,m = self.reviewer.classify_line(l)
+      # If a file is being deleted, the file below will be /dev/null. Gerrit
+      # (rightfully) doesn't know what to do with a comment on the file
+      # /dev/null, so it will throw a 400-BAD_REQUEST if we try.
+      #
+      # TODO: We should store FILE_OLD as cur_file and then update cur_file to
+      #       FILE_NEW if it is not /dev/null. I _think_ it's that easy, but
+      #       don't have time to actually test the edge cases. So for now we'll
+      #       store /dev/null and then discard the comment because
+      #       msg.has_filename() will fail. All this work for nothing :(
       if t == LineType.FILE_NEW:
         cur_file = m.group(1)
         cur_line = 0

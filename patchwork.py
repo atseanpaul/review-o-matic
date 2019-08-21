@@ -29,7 +29,7 @@ class PatchworkInlineComment(object):
     self.filename = filename
 
   def has_filename(self):
-    return bool(self.filename)
+    return bool(self.filename) and self.filename != '/dev/null'
 
   def set_line(self, line):
     self.line = line
