@@ -180,21 +180,33 @@ class Reviewer(object):
   def generate_remote_name(self, remote):
     return re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
 
+  def add_or_update_remote(self, remote_name, remote):
+    cmd = ['remote', 'set-url', remote_name, remote]
+    ret = self.git(cmd, CallType.CHECK_CALL)
+    if ret == 0:
+      return
+
+    cmd = ['remote', 'add', remote_name, remote]
+    ret = self.git(cmd, CallType.CHECK_CALL)
+    if ret != 0:
+      sys.stderr.write('ERROR: Failed to add remote {} {} ({})\n', remote,
+                       remote_name, ret)
+      raise ValueError('Failed to add remote {} {} ({})\n', remote, remote_name,
+                       ret)
+
   def fetch_remote(self, remote_name, remote, branch):
     if self.verbose:
       print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
 
-    cmd = ['remote', 'add', remote_name, remote]
-    # LAZY: Assuming if this fails the remote already exists
-    self.git(cmd, CallType.CALL)
+    self.add_or_update_remote(remote_name, remote)
 
     try:
       cmd = ['fetch', '--no-tags', '--prune', remote_name,
              'refs/heads/' + branch]
       self.git(cmd, CallType.CALL)
-    except:
-      cmd = ['remote', 'rm', remote_name]
-      self.git(cmd, CallType.CALL, stderr=None)
+    except Exception as e:
+      sys.stderr.write('ERROR: Fetch remote ({}/{}) failed: ({})\n'.format(
+                       remote_name, branch, str(e)))
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
