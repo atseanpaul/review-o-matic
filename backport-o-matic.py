@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 import re
 import subprocess
 import sys
+
+logger = logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 class LineType(object):
   SUBJECT     = 1

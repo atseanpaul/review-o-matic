@@ -1,10 +1,13 @@
 import collections
 import pathlib
 import json
+import logging
 import re
 import requests
 import sys
 import urllib
+
+logger = logging.getLogger(__name__)
 
 class PatchworkInlineComment(object):
   def __init__(self):
@@ -116,11 +119,11 @@ class PatchworkPatch(object):
 
     m = re.match('/([a-z/]*)/([0-9]*)/?', parsed.path)
     if not m or not m.group(2):
-      sys.stderr.write('ERROR: Malformed patchwork URL "%s"\n' % url)
+      logger.error('Malformed patchwork URL "%s"'.format(url))
       raise ValueError('Invalid url')
 
     if parsed.netloc not in self.PATCHWORK_WHITELIST:
-      sys.stderr.write('ERROR: Patchwork host not whitelisted "%s"\n' % url)
+      logger.error('Patchwork host not whitelisted "%s"'.format(url))
       raise ValueError('Invalid host')
 
     self.url = parsed

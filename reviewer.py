@@ -1,8 +1,11 @@
 import difflib
 import enum
+import logging
 import re
 import subprocess
 import sys
+
+logger = logging.getLogger(__name__)
 
 class LineType(enum.Enum):
   GITDIFF = 'diff --git '
@@ -62,10 +65,10 @@ class Reviewer(object):
       l_type,_ = self.classify_line(l)
 
       if self.chatty:
-        print('%s- "%s"' % (l_type, l))
+        logger.debug('%s- "%s"' % (l_type, l))
 
       if not l_type:
-        sys.stderr.write('ERROR: Could not classify line "%s"\n' % l)
+        logger.error('Could not classify line "{}"'.format(l))
         ctx_counter = 0
         continue
 
@@ -82,16 +85,14 @@ class Reviewer(object):
       elif l_type in include:
         ret.append(l)
       else:
-        sys.stderr.write('ERROR: line_type not handled {}: {}\n'.format(l_type,
-                                                                        l))
+        logger.error('line_type not handled {}: {}'.format(l_type, l))
 
     return ret
 
   def git(self, cmd, call_type, stdout=subprocess.DEVNULL,
           stderr=subprocess.DEVNULL):
     run_cmd = self.git_cmd + cmd
-    if self.verbose:
-      print('GIT: {}'.format(' '.join(run_cmd)))
+    logger.debug('GIT: {}'.format(' '.join(run_cmd)))
     if call_type == CallType.CHECK_OUTPUT:
       return subprocess.check_output(run_cmd, stderr=stderr).decode('UTF-8')
     elif call_type == CallType.CHECK_CALL:
@@ -189,14 +190,12 @@ class Reviewer(object):
     cmd = ['remote', 'add', remote_name, remote]
     ret = self.git(cmd, CallType.CHECK_CALL)
     if ret != 0:
-      sys.stderr.write('ERROR: Failed to add remote {} {} ({})\n', remote,
-                       remote_name, ret)
-      raise ValueError('Failed to add remote {} {} ({})\n', remote, remote_name,
+      logger.error('Failed to add remote {} {} ({})', remote, remote_name, ret)
+      raise ValueError('Failed to add remote {} {} ({})', remote, remote_name,
                        ret)
 
   def fetch_remote(self, remote_name, remote, branch):
-    if self.verbose:
-      print('Fetching {}/{} as {}'.format(remote, branch, remote_name))
+    logger.debug('Fetching {}/{} as {}'.format(remote, branch, remote_name))
 
     self.add_or_update_remote(remote_name, remote)
 
@@ -205,27 +204,24 @@ class Reviewer(object):
              'refs/heads/' + branch]
       self.git(cmd, CallType.CALL)
     except Exception as e:
-      sys.stderr.write('ERROR: Fetch remote ({}/{}) failed: ({})\n'.format(
-                       remote_name, branch, str(e)))
+      logger.error('Fetch remote ({}/{}) failed: ({})'.format(remote_name,
+                   branch, str(e)))
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
     cmd = ['fetch', '--prune', remote, 'refs/heads/' + branch]
-    if self.verbose:
-      print("Running {}".format(" ".join(cmd)))
+    logger.debug("Running {}".format(" ".join(cmd)))
 
     self.git(cmd, CallType.CALL)
 
     cmd = ['checkout', commit]
-    if self.verbose:
-      print("Running {}".format(" ".join(cmd)))
+    logger.debug("Running {}".format(" ".join(cmd)))
 
     self.git(cmd, CallType.CALL)
 
   def checkout_reset(self, path):
     cmd = ['checkout', '--', path]
-    if self.verbose:
-      print('Running {}'.format(' '.join(cmd)))
+    logger.debug('Running {}'.format(' '.join(cmd)))
 
     self.git(cmd, CallType.CALL)
 
@@ -244,8 +240,8 @@ class Reviewer(object):
       ret = self.git(cmd, CallType.CHECK_CALL)
       return ret == 0
     except Exception as e:
-      sys.stderr.write('ERROR: git merge-base failed ({}/{}:{}): ({})\n'.format(
-                       remote_name, branch, sha, str(e)))
+      logger.error('git merge-base failed ({}/{}:{}): ({})'.format(remote_name,
+                   branch, sha, str(e)))
       raise
 
   def get_commit_from_sha(self, sha):

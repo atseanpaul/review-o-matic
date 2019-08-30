@@ -1,7 +1,10 @@
 import errno
+import logging
 from pathlib import Path
 import shutil
 import subprocess
+
+logger = logging.getLogger(__name__)
 
 class KernelConfigChecker():
   def __init__(self, verbose=False, reviewer=None):
@@ -25,15 +28,13 @@ class KernelConfigChecker():
 
   def create_kernel_configs(self):
       cmd = [str(self.config_cmd), 'genconfig']
-      if self.verbose:
-        print('Running {}'.format(' '.join(cmd)))
+      logger.debug('Running {}'.format(' '.join(cmd)))
 
       subprocess.call(cmd, stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL)
 
   def move_genconfigs(self, dest):
-    if self.verbose:
-      print('Moving configs from {} to {}'.format(self.genconfig_dir, dest))
+    logger.debug('Moving configs {}->{}'.format(self.genconfig_dir, dest))
 
     if not dest.is_dir():
       dest.mkdir()
@@ -41,8 +42,7 @@ class KernelConfigChecker():
       shutil.copy(str(filename), str(dest))
 
   def rmdir_recursive(self, dir):
-    if self.verbose:
-        print('Deleting {}'.format(dir))
+    logger.debug('Deleting {}'.format(dir))
 
     shutil.rmtree(dir)
 
@@ -107,8 +107,7 @@ class KernelConfigChecker():
 
     # Compare the two configs against each other.
     cmd = ['diff', '-ru0', 'configs_orig', 'configs_new']
-    if self.verbose:
-      print('Running {}'.format(' '.join(cmd)))
+    logger.debug('Running {}'.format(' '.join(cmd)))
 
     proc = subprocess.Popen(cmd, cwd=str(self.kernel_dir), stdout=subprocess.PIPE)
     kconfig_diff = proc.communicate()[0].decode('UTF-8')

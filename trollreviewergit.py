@@ -1,9 +1,12 @@
 from trollreview import ReviewType
 from trollreviewer import ChangeReviewer
 
+import logging
 import requests
 import sys
 import urllib
+
+logger = logging.getLogger(__name__)
 
 class GitChangeReviewer(ChangeReviewer):
   DEFAULT_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
@@ -48,15 +51,14 @@ class GitChangeReviewer(ChangeReviewer):
       l += parsed.path
       l += self.get_cgit_web_link_path()
     else:
-      sys.stderr.write(
-            'ERROR: Could not parse web link for {}\n'.format(remote))
+      logger.error('Could not parse web link for {}'.format(remote))
       return
 
     r = requests.get(l)
     if r.status_code == 200:
       self.review_result.add_web_link(l)
     else:
-      sys.stderr.write('ERROR: Got {} status for {}\n'.format(r.status_code, l))
+      logger.error('Got {} status for {}'.format(r.status_code, l))
       return
 
 

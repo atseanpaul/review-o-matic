@@ -2,11 +2,14 @@
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
 import time
 
 from gerrit import Gerrit
+
+logger = logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 class Submitter(object):
   def __init__(self, last_cid, review, verify, ready):

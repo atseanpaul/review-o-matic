@@ -6,7 +6,10 @@ from trollreviewer import ChangeReviewer
 from trollstrings import ReviewStrings
 
 from fuzzywuzzy import fuzz
+import logging
 import sys
+
+logger = logging.getLogger(__name__)
 
 class FromlistReviewStrings(ReviewStrings):
   CLEAN_BACKPORT_FOOTER='''
@@ -91,16 +94,15 @@ class FromlistChangeReviewer(ChangeReviewer):
         continue
 
     if not self.upstream_patch:
-      sys.stderr.write(
-        'ERROR: patch missing from patchwork, or patchwork host '
-        'not whitelisted for {} ({})\n'.format(self.change,
-                                               patchwork_url))
+      logger.warning('patch missing from patchwork, or patchwork host not '
+                     'whitelisted for {} ({})'.format(self.change,
+                     patchwork_url))
       return
 
     try:
       self.patchwork_comments = self.patchwork_patch.get_comments()
     except Exception as e:
-      print('exception fetching comments: {}'.format(e))
+      logger.warning('Exception fetching comments: {}'.format(e))
       pass
 
   def compare_patches_clean(self):
@@ -152,8 +154,8 @@ class FromlistChangeReviewer(ChangeReviewer):
       gerrit_line = l.strip('+- \t')
       context_line = msg.context[ctx_counter].strip('+- \t')
 
-      #print('G: {}'.format(l.strip('+- \t')))
-      #print('P: {}'.format(msg.context[ctx_counter].strip('+- \t')))
+      #logging.debug('G: {}'.format(l.strip('+- \t')))
+      #logging.debug('P: {}'.format(msg.context[ctx_counter].strip('+- \t')))
 
       if gerrit_line == context_line:
         # If we find any (non-empty) match, set the return values since the
@@ -163,7 +165,7 @@ class FromlistChangeReviewer(ChangeReviewer):
           msg.set_line(cur_line)
         ctx_counter += 1
 
-      #print('R: f={} l={} cc={} ratio={}'.format(msg.filename, msg.line, ctx_counter, ratio))
+      #logging.debug('R: f={} l={} cc={} ratio={}'.format(msg.filename, msg.line, ctx_counter, ratio))
 
       if ctx_counter and ctx_counter == len(msg.context):
         break
@@ -207,9 +209,9 @@ class FromlistChangeReviewer(ChangeReviewer):
           self.add_inline_comment_review(c, m)
         '''
         else:
-          print("FOUND ABANDONED COMMENT")
-          print("--------")
-          print(c)
-          print("--------")
+          logging.debug("FOUND ABANDONED COMMENT")
+          logging.debug("--------")
+          logging.debug(c)
+          logging.debug("--------")
         '''
     self.add_upstream_comment_review()

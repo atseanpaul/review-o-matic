@@ -12,9 +12,14 @@ from trollreviewerchromium import ChromiumChangeReviewer
 import argparse
 import datetime
 import json
+import logging
+from logging import handlers
 import requests
 import sys
 import time
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG) # leave this to handlers
 
 class Troll(object):
   def __init__(self, url, args):
@@ -45,8 +50,8 @@ class Troll(object):
       self.stats[key] += 1
 
   def do_review(self, change, review):
-    print('Review for change: {}'.format(change.url()))
-    print('  Issues: {}, Feedback: {}, Vote:{}, Notify:{}'.format(
+    logger.info('Review for change: {}'.format(change.url()))
+    logger.info('  Issues: {}, Feedback: {}, Vote:{}, Notify:{}'.format(
         review.issues.keys(), review.feedback.keys(), review.vote,
         review.notify))
 
@@ -89,8 +94,7 @@ class Troll(object):
                    chatty=self.args.chatty)
     ret = 0
     for c in changes:
-      if self.args.verbose:
-        print('Processing change {}'.format(c.url()))
+      logger.debug('Processing change {}'.format(c.url()))
 
       force_review = self.args.force_cl or self.args.force_all
 
@@ -100,8 +104,8 @@ class Troll(object):
           if m.tag == self.tag and m.revision_num == c.current_revision.number:
             days_since_last_review = (datetime.datetime.utcnow() - m.date).days
 
-      if self.args.verbose and days_since_last_review != None:
-        print('    Reviewed {} days ago'.format(days_since_last_review))
+      if  days_since_last_review != None:
+        logger.debug('    Reviewed {} days ago'.format(days_since_last_review))
 
       # Find a reviewer and blacklist if not found
       reviewer = None
@@ -136,20 +140,18 @@ class Troll(object):
     if not self.args.dry_run and self.args.stats_file:
       with open(self.args.stats_file, 'wt') as f:
         json.dump(self.stats, f)
-    print('--')
     summary = '  Summary: '
     total = 0
     for k,v in self.stats.items():
       summary += '{}={} '.format(k,v)
       total += v
     summary += 'total={}'.format(total)
-    print(summary)
-    print('')
+    logger.info(summary)
 
   def run(self):
     if self.args.force_cl:
       c = self.gerrit.get_change(self.args.force_cl, self.args.force_rev)
-      print('Force reviewing change  {}'.format(c))
+      logger.info('Force reviewing change  {}'.format(c))
       self.process_changes([c])
       return
 
@@ -172,21 +174,42 @@ class Troll(object):
         did_review = 0
         for p in prefixes:
           changes = self.get_changes(p)
-          if self.args.verbose:
-            print('{} changes for prefix {}'.format(len(changes), p))
+          logger.debug('{} changes for prefix {}'.format(len(changes), p))
           did_review += self.process_changes(changes)
         if did_review > 0:
           self.update_stats()
         if not self.args.daemon:
           break
-        if self.args.verbose:
-          print('Finished! Going to sleep until next run')
+        logger.debug('Finished! Going to sleep until next run')
 
       except (requests.exceptions.HTTPError, OSError) as e:
-        sys.stderr.write('Error getting changes: ({})\n'.format(str(e)))
+        logger.error('Error getting changes: ({})'.format(str(e)))
         time.sleep(60)
 
       time.sleep(120)
+
+
+def setup_logging(args):
+  info_handler = logging.StreamHandler(sys.stdout)
+  info_handler.setFormatter(logging.Formatter('%(levelname)8s - %(message)s'))
+  if args.verbose:
+    info_handler.setLevel(logging.DEBUG)
+  else:
+    info_handler.setLevel(logging.INFO)
+  logger.addHandler(info_handler)
+
+  if not args.err_logfile:
+    return
+
+  err_handler = logging.handlers.RotatingFileHandler(args.err_logfile,
+                                                     maxBytes=10000000,
+                                                     backupCount=20)
+  err_handler.setLevel(logging.WARNING)
+  f = logging.Formatter(
+        '%(asctime)s %(levelname)8s - %(name)s.%(funcName)s:%(lineno)d - ' +
+        '%(message)s')
+  err_handler.setFormatter(f)
+  logger.addHandler(err_handler)
 
 
 def main():
@@ -209,7 +232,10 @@ def main():
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
   parser.add_argument('--kconfig-hound', default=None, action='store_true',
     help='Compute and post the total difference for kconfig changes')
+  parser.add_argument('--err-logfile', default=None, help='Path to ERROR log')
   args = parser.parse_args()
+
+  setup_logging(args)
 
   if args.force_all:
     args.dry_run = True
