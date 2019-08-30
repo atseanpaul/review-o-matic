@@ -189,7 +189,8 @@ class Reviewer(object):
     self.git(cmd, CallType.CALL)
 
     try:
-      cmd = ['fetch', '--prune', remote_name, 'refs/heads/' + branch]
+      cmd = ['fetch', '--no-tags', '--prune', remote_name,
+             'refs/heads/' + branch]
       self.git(cmd, CallType.CALL)
     except:
       cmd = ['remote', 'rm', remote_name]
