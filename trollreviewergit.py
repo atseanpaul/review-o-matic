@@ -132,8 +132,9 @@ class GitChangeReviewer(ChangeReviewer):
       return False
 
     remote_name = self.reviewer.generate_remote_name(self.DEFAULT_REMOTE)
-    self.reviewer.fetch_remote(remote_name, self.DEFAULT_REMOTE,
-                               self.DEFAULT_BRANCH)
+    if remote_name != self.upstream_sha['remote_name']:
+        self.reviewer.fetch_remote(remote_name, self.DEFAULT_REMOTE,
+                                   self.DEFAULT_BRANCH)
     return self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
                                           self.DEFAULT_BRANCH)
 
