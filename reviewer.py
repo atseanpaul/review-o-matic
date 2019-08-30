@@ -95,7 +95,11 @@ class Reviewer(object):
     if call_type == CallType.CHECK_OUTPUT:
       return subprocess.check_output(run_cmd, stderr=stderr).decode('UTF-8')
     elif call_type == CallType.CHECK_CALL:
-      subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)
+      try:
+        subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)
+        return 0
+      except subprocess.CalledProcessError as e:
+        return e.returncode
     elif call_type == CallType.CALL:
       subprocess.call(run_cmd, stdout=stdout, stderr=stderr)
     else:
@@ -221,12 +225,15 @@ class Reviewer(object):
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
 
   def is_sha_in_branch(self, sha, remote_name, branch):
-    cmd = ['log', '--format=%H', '{}^..{}/{}'.format(sha, remote_name, branch)]
+    cmd = ['merge-base', '--is-ancestor', sha, '{}/{}'.format(remote_name,
+                                                              branch)]
     try:
-      output = self.git(cmd, CallType.CHECK_OUTPUT)
-    except:
-      return False
-    return True if sha in output else False
+      ret = self.git(cmd, CallType.CHECK_CALL)
+      return ret == 0
+    except Exception as e:
+      sys.stderr.write('ERROR: git merge-base failed ({}/{}:{}): ({})\n'.format(
+                       remote_name, branch, sha, str(e)))
+      raise
 
   def get_commit_from_sha(self, sha):
     cmd = ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT), r'--format=%B',
