@@ -102,7 +102,7 @@ class FromlistChangeReviewer(ChangeReviewer):
     try:
       self.patchwork_comments = self.patchwork_patch.get_comments()
     except Exception as e:
-      logger.warning('Exception fetching comments: {}'.format(e))
+      logger.exception('Exception fetching comments: {}'.format(e))
       pass
 
   def compare_patches_clean(self):

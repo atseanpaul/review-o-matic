@@ -89,48 +89,55 @@ class Troll(object):
   def is_change_in_blacklist(self, change):
     return self.blacklist.get(change.number) == change.current_revision.number
 
+  def process_change(self, rev, c):
+    logger.debug('Processing change {}'.format(c.url()))
+
+    force_review = self.args.force_cl or self.args.force_all
+
+    days_since_last_review = None
+    if not force_review:
+      for m in c.messages:
+        if m.tag == self.tag and m.revision_num == c.current_revision.number:
+          days_since_last_review = (datetime.datetime.utcnow() - m.date).days
+
+    if  days_since_last_review != None:
+      logger.debug('    Reviewed {} days ago'.format(days_since_last_review))
+
+    # Find a reviewer and blacklist if not found
+    reviewer = None
+    if FromlistChangeReviewer.can_review_change(c, days_since_last_review):
+      reviewer = FromlistChangeReviewer(rev, c, self.args.dry_run)
+    elif FromgitChangeReviewer.can_review_change(c, days_since_last_review):
+      reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run,
+                                       days_since_last_review)
+    elif UpstreamChangeReviewer.can_review_change(c, days_since_last_review):
+      reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
+    elif self.args.kconfig_hound and \
+        ChromiumChangeReviewer.can_review_change(c, days_since_last_review):
+      reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run,
+                                        self.args.verbose)
+    if not reviewer:
+      self.add_change_to_blacklist(c)
+      return None
+
+    if not force_review and self.is_change_in_blacklist(c):
+      return None
+
+    return reviewer.review_patch()
+
   def process_changes(self, changes):
     rev = Reviewer(git_dir=self.args.git_dir, verbose=self.args.verbose,
                    chatty=self.args.chatty)
     ret = 0
     for c in changes:
-      logger.debug('Processing change {}'.format(c.url()))
-
-      force_review = self.args.force_cl or self.args.force_all
-
-      days_since_last_review = None
-      if not force_review:
-        for m in c.messages:
-          if m.tag == self.tag and m.revision_num == c.current_revision.number:
-            days_since_last_review = (datetime.datetime.utcnow() - m.date).days
-
-      if  days_since_last_review != None:
-        logger.debug('    Reviewed {} days ago'.format(days_since_last_review))
-
-      # Find a reviewer and blacklist if not found
-      reviewer = None
-      if FromlistChangeReviewer.can_review_change(c, days_since_last_review):
-        reviewer = FromlistChangeReviewer(rev, c, self.args.dry_run)
-      elif FromgitChangeReviewer.can_review_change(c, days_since_last_review):
-        reviewer = FromgitChangeReviewer(rev, c, self.args.dry_run,
-                                         days_since_last_review)
-      elif UpstreamChangeReviewer.can_review_change(c, days_since_last_review):
-        reviewer = UpstreamChangeReviewer(rev, c, self.args.dry_run)
-      elif self.args.kconfig_hound and \
-          ChromiumChangeReviewer.can_review_change(c, days_since_last_review):
-        reviewer = ChromiumChangeReviewer(rev, c, self.args.dry_run,
-                                          self.args.verbose)
-      if not reviewer:
-        self.add_change_to_blacklist(c)
-        continue
-
-      if not force_review and self.is_change_in_blacklist(c):
-        continue
-
-      result = reviewer.review_patch()
-      if result:
-        self.do_review(c, result)
-        ret += 1
+      try:
+        result = self.process_change(rev, c)
+        if result:
+          self.do_review(c, result)
+          ret += 1
+      except Exception as e:
+        logger.error('Exception processing change {}'.format(c.url()))
+        logger.exception('Exception: {}'.format(e))
 
       self.add_change_to_blacklist(c)
 
@@ -184,6 +191,7 @@ class Troll(object):
 
       except (requests.exceptions.HTTPError, OSError) as e:
         logger.error('Error getting changes: ({})'.format(str(e)))
+        logger.exception('Exception getting changes: {}'.format(e))
         time.sleep(60)
 
       time.sleep(120)

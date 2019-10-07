@@ -100,6 +100,7 @@ class Reviewer(object):
         subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)
         return 0
       except subprocess.CalledProcessError as e:
+        logger.exception('Exception running git: {}'.format(e))
         return e.returncode
     elif call_type == CallType.CALL:
       subprocess.call(run_cmd, stdout=stdout, stderr=stderr)
@@ -206,6 +207,7 @@ class Reviewer(object):
     except Exception as e:
       logger.error('Fetch remote ({}/{}) failed: ({})'.format(remote_name,
                    branch, str(e)))
+      logger.exception('Exception fetching remote: {}'.format(e))
       raise
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
@@ -242,6 +244,7 @@ class Reviewer(object):
     except Exception as e:
       logger.error('git merge-base failed ({}/{}:{}): ({})'.format(remote_name,
                    branch, sha, str(e)))
+      logger.exception('Exception checking sha: {}'.format(e))
       raise
 
   def get_commit_from_sha(self, sha):
