@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 from reviewer import Reviewer
 from gerrit import Gerrit, GerritRevision, GerritMessage
