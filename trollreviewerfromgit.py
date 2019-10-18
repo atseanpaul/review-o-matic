@@ -82,7 +82,7 @@ class FromgitChangeReviewer(GitChangeReviewer):
 
     if self.is_sha_in_mainline():
       self.add_patch_in_mainline_review()
-    if self.is_remote_in_blacklist():
+    elif self.is_remote_in_blacklist():
       self.add_patch_in_forbidden_tree()
 
   def review_patch(self):
