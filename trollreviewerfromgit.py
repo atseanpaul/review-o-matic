@@ -1,3 +1,5 @@
+import re
+
 from trollreview import ReviewResult
 from trollreview import ReviewType
 from trollreviewergit import GitChangeReviewer
@@ -21,8 +23,30 @@ This patch is labeled as FROMGIT, however it seems like it's already been
 applied to mainline. Please revise your patch subject to replace FROMGIT with
 UPSTREAM.
 '''
+  PATCH_IN_FORBIDDEN_TREE='''
+The remote listed on this patch is in a forbidden tree. Integration and rebasing
+trees are unacceptable sources of patches since their commit sha can change.
+
+Please source either a non-rebasing maintainer tree or a mailing list post. See
+the link below on backporting for more information.
+'''
 
 class FromgitChangeReviewer(GitChangeReviewer):
+  REMOTE_BLACKLIST=[
+      {
+        'name': 'linux-next',
+        're': '.*?://git\.kernel\.org/pub/scm/linux/kernel/git/next/.*?\.git'
+      },
+      {
+        'name': 'drm-tip',
+        're': '.*?://(anon)?git\.freedesktop\.org/(git/)?drm-tip(\.git)?'
+      },
+      {
+        'name': 'drm-tip',
+        're': '.*?://github\.com/freedesktop/drm-tip(\.git)?'
+      }
+  ]
+
   def __init__(self, reviewer, change, dry_run, days_since_last_review):
     super().__init__(reviewer, change, dry_run)
     self.strings = FromgitReviewStrings()
@@ -39,11 +63,27 @@ class FromgitChangeReviewer(GitChangeReviewer):
                                   self.strings.PATCH_IN_MAINLINE, vote=-1,
                                   notify=True)
 
+  def is_remote_in_blacklist(self):
+    if not self.upstream_sha:
+      return False
+
+    for b in self.REMOTE_BLACKLIST:
+      if re.match(b['re'], self.upstream_sha['remote'], re.I):
+        return True
+    return False
+
+  def add_patch_in_forbidden_tree(self):
+    self.review_result.add_review(ReviewType.FORBIDDEN_TREE,
+                                  self.strings.PATCH_IN_FORBIDDEN_TREE, vote=-1,
+                                  notify=True)
+
   def get_upstream_patch(self):
     super().get_upstream_patch()
 
     if self.is_sha_in_mainline():
       self.add_patch_in_mainline_review()
+    if self.is_remote_in_blacklist():
+      self.add_patch_in_forbidden_tree()
 
   def review_patch(self):
     result = super().review_patch()

@@ -16,6 +16,7 @@ class ReviewType(enum.Enum):
   IN_MAINLINE = 'in_mainline'
   UPSTREAM_COMMENTS = 'upstream_comments'
   NOT_IN_MAINLINE = 'not_in_mainline'
+  FORBIDDEN_TREE = 'forbidden_tree'
 
   def __str__(self):
     return self.value
