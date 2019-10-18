@@ -138,7 +138,7 @@ class GitChangeReviewer(ChangeReviewer):
         self.reviewer.fetch_remote(remote_name, self.DEFAULT_REMOTE,
                                    self.DEFAULT_BRANCH)
     return self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
-                                          self.DEFAULT_BRANCH)
+                                          self.DEFAULT_BRANCH, skip_err=True)
 
   def get_patches(self):
     super().get_patches()

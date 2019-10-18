@@ -90,7 +90,7 @@ class Reviewer(object):
     return ret
 
   def git(self, cmd, call_type, stdout=subprocess.DEVNULL,
-          stderr=subprocess.DEVNULL):
+          stderr=subprocess.DEVNULL, skip_err=False):
     run_cmd = self.git_cmd + cmd
     logger.debug('GIT: {}'.format(' '.join(run_cmd)))
     if call_type == CallType.CHECK_OUTPUT:
@@ -100,7 +100,10 @@ class Reviewer(object):
         subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)
         return 0
       except subprocess.CalledProcessError as e:
-        logger.exception('Exception running git: {}'.format(e))
+        if not skip_err:
+          logger.exception('Exception running git: {}'.format(e))
+          logger.error('FAIL: {}'.format(' '.join(run_cmd)))
+          raise
         return e.returncode
     elif call_type == CallType.CALL:
       subprocess.call(run_cmd, stdout=stdout, stderr=stderr)
@@ -235,17 +238,18 @@ class Reviewer(object):
     # and only return the SHA, not the remote/branch
     return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
 
-  def is_sha_in_branch(self, sha, remote_name, branch):
+  def is_sha_in_branch(self, sha, remote_name, branch, skip_err=False):
     cmd = ['merge-base', '--is-ancestor', sha, '{}/{}'.format(remote_name,
                                                               branch)]
     try:
-      ret = self.git(cmd, CallType.CHECK_CALL)
+      ret = self.git(cmd, CallType.CHECK_CALL, skip_err=True)
       return ret == 0
     except Exception as e:
-      logger.error('git merge-base failed ({}/{}:{}): ({})'.format(remote_name,
-                   branch, sha, str(e)))
-      logger.exception('Exception checking sha: {}'.format(e))
-      raise
+      if not skip_err:
+        logger.error('git merge-base failed ({}/{}:{}): ({})'.format(remote_name,
+                     branch, sha, str(e)))
+        logger.exception('Exception checking sha: {}'.format(e))
+        raise
 
   def get_commit_from_sha(self, sha):
     cmd = ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT), r'--format=%B',
