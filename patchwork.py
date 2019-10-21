@@ -107,11 +107,11 @@ class PatchworkComment(object):
 class PatchworkPatch(object):
   # Whitelisted patchwork hosts
   PATCHWORK_WHITELIST = [
-    'lore.kernel.org',
-    'patchwork.freedesktop.org',
-    'patchwork.kernel.org',
-    'patchwork.linuxtv.org',
-    'patchwork.ozlabs.org'
+    { 'netloc': 'lore.kernel.org', 'path': 'patchwork' },
+    { 'netloc': 'patchwork.freedesktop.org', 'path': '' },
+    { 'netloc': 'patchwork.kernel.org', 'path': '' },
+    { 'netloc': 'patchwork.linuxtv.org', 'path': '' },
+    { 'netloc': 'patchwork.ozlabs.org', 'path': '' }
   ]
 
   def __init__(self, url):
@@ -122,7 +122,13 @@ class PatchworkPatch(object):
       logger.error('Malformed patchwork URL "%s"'.format(url))
       raise ValueError('Invalid url')
 
-    if parsed.netloc not in self.PATCHWORK_WHITELIST:
+    found = False
+    for i in self.PATCHWORK_WHITELIST:
+      if parsed.netloc == i['netloc']:
+        self.path_prefix = i['path']
+        found = True
+        break
+    if not found:
       logger.error('Patchwork host not whitelisted "%s"'.format(url))
       raise ValueError('Invalid host')
 
@@ -133,18 +139,23 @@ class PatchworkPatch(object):
 
   def get_patch(self):
     if not self.patch:
-      raw_path = str(pathlib.PurePath(self.url.path, 'raw'))
-      raw_url = self.url._replace(path=raw_path)
+      raw_path = pathlib.PurePath(self.url.path, 'raw')
+      raw_url = self.url._replace(path=str(raw_path))
       self.patch = requests.get(raw_url.geturl()).text
     return self.patch
 
   def get_comments(self):
-    if not self.comments:
-      comments_path = '/api/patches/{}/comments/'.format(self.id)
-      comments_url = self.url._replace(path=comments_path)
-      rest = requests.get(comments_url.geturl()).json()
-      for c in rest:
-        comment = PatchworkComment(c)
-        self.comments.append(comment)
+    if self.comments:
+        return self.comments
+
+    comments_path = pathlib.PurePath(self.path_prefix,
+                                     'api/patches/{}/comments/'.format(self.id))
+    comments_url = self.url._replace(path=str(comments_path))
+    resp = requests.get(comments_url.geturl())
+
+    rest = resp.json()
+    for c in rest:
+      comment = PatchworkComment(c)
+      self.comments.append(comment)
 
     return self.comments
