@@ -168,7 +168,12 @@ class Troll(object):
     if self.args.stats_file:
       try:
         with open(self.args.stats_file, 'rt') as f:
-          self.stats = json.load(f)
+          file_stats = json.load(f)
+
+        # load the stats from the file into memory
+        for k,v in file_stats.items():
+            self.stats[k] = v
+
       except FileNotFoundError:
         self.update_stats()
 
