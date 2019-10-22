@@ -2,6 +2,11 @@ class ReviewStrings(object):
   HEADER='''
 -- Automated message --
 '''
+  GREETING='''
+Hi {},
+Thank you for your patch, I had a {} time reading through it! Here is some
+feedback for you.
+'''
   FOUND_ISSUES_HEADER_SINGLE='''
 The following issue was found with your patch:
 '''
@@ -126,6 +131,18 @@ https://thats.poorly.run/
 If you would like to view the upstream patch on the web, follow this link:
 {}
 '''
+
+  GREETING_SWAG = ['amazing', 'awesome', 'beautiful', 'blithesome', 'capital',
+                   'classic', 'corking', 'cracking', 'dandy', 'divine',
+                   'dynamite', 'excellent', 'fabulous', 'fantabulous',
+                   'fantastic', 'grand', 'great', 'groovy', 'incredible',
+                   'ineffable', 'jim-dandy', 'marvelous', 'miraculous',
+                   'mirthful', 'neat', 'nifty', 'out-of-sight', 'outstanding',
+                   'peachy', 'quality', 'radical', 'remarkable', 'righteous',
+                   'rousing', 'sensational', 'spectacular', 'splendid',
+                   'stellar', 'sterling', 'stupendous', 'sublime', 'super',
+                   'superb', 'supernal', 'swell', 'terrific', 'topping',
+                   'unbelievable', 'wonderful', 'wondrous']
 
   SWAG = ['Frrrresh', 'Crisper Than Cabbage', 'Awesome', 'Ahhhmazing',
           'Cool As A Cucumber', 'Most Excellent', 'Eximious', 'Prestantious',

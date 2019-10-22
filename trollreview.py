@@ -97,6 +97,9 @@ class ReviewResult(object):
 
   def generate_review_message(self):
     msg = self.strings.HEADER
+    msg += self.strings.GREETING.format(
+                self.change.current_revision.uploader_name,
+                random.choice(self.strings.GREETING_SWAG))
     msg += self.generate_issues()
     if len(self.issues) and len(self.feedback):
       msg += self.strings.REVIEW_SEPARATOR
