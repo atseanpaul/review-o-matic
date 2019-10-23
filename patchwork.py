@@ -107,11 +107,11 @@ class PatchworkComment(object):
 class PatchworkPatch(object):
   # Whitelisted patchwork hosts
   PATCHWORK_WHITELIST = [
-    { 'netloc': 'lore.kernel.org', 'path': 'patchwork' },
-    { 'netloc': 'patchwork.freedesktop.org', 'path': '' },
-    { 'netloc': 'patchwork.kernel.org', 'path': '' },
-    { 'netloc': 'patchwork.linuxtv.org', 'path': '' },
-    { 'netloc': 'patchwork.ozlabs.org', 'path': '' }
+    { 'netloc': 'lore.kernel.org', 'path': 'patchwork', 'has_comments': True },
+    { 'netloc': 'patchwork.freedesktop.org', 'path': '', 'has_comments': False},
+    { 'netloc': 'patchwork.kernel.org', 'path': '', 'has_comments': True },
+    { 'netloc': 'patchwork.linuxtv.org', 'path': '', 'has_comments': True },
+    { 'netloc': 'patchwork.ozlabs.org', 'path': '', 'has_comments': True }
   ]
 
   def __init__(self, url):
@@ -126,6 +126,7 @@ class PatchworkPatch(object):
     for i in self.PATCHWORK_WHITELIST:
       if parsed.netloc == i['netloc']:
         self.path_prefix = i['path']
+        self.comments_supported = i['has_comments']
         found = True
         break
     if not found:
@@ -145,7 +146,7 @@ class PatchworkPatch(object):
     return self.patch
 
   def get_comments(self):
-    if self.comments:
+    if self.comments or not self.comments_supported:
         return self.comments
 
     comments_path = pathlib.PurePath(self.path_prefix,
