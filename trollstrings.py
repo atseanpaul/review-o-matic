@@ -44,7 +44,6 @@ upstream. The following hash/remote/branch tuple(s) were tried:
 '''
   INVALID_HASH_LINE='''
   {}
-    from remote {}
 '''
   MISSING_AM='''
 Your commit message is missing the patchwork URL. It should be in the

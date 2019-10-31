@@ -64,11 +64,11 @@ class FromgitChangeReviewer(GitChangeReviewer):
                                   notify=True)
 
   def is_remote_in_blacklist(self):
-    if not self.upstream_sha:
+    if not self.upstream_ref:
       return False
 
     for b in self.REMOTE_BLACKLIST:
-      if re.match(b['re'], self.upstream_sha['remote'], re.I):
+      if re.match(b['re'], self.upstream_ref.remote, re.I):
         return True
     return False
 

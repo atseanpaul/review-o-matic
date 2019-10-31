@@ -1,7 +1,9 @@
+from reviewer import CommitRef
 from trollreview import ReviewType
 from trollreviewer import ChangeReviewer
 
 import logging
+import re
 import requests
 import sys
 import urllib
@@ -14,18 +16,20 @@ class GitChangeReviewer(ChangeReviewer):
 
   def __init__(self, reviewer, change, dry_run):
     super().__init__(reviewer, change, dry_run)
-    self.upstream_sha = None
+    self.upstream_ref = None
 
   @staticmethod
   def can_review_change(change, days_since_last_review):
     raise NotImplementedError()
 
   def get_cgit_web_link_path(self):
-    return '/commit/?head={}&id={}'.format(self.upstream_sha['branch'],
-                                           self.upstream_sha['sha'])
+    ret = '/commit/?id={}'.format(self.upstream_ref.sha)
+    if self.upstream_ref.branch:
+      return ret + '&head={}'.format(self.upstream_ref.branch)
+    return ret
 
   def get_upstream_web_link(self):
-    remote = self.upstream_sha['remote']
+    remote = self.upstream_ref.remote
     parsed = urllib.parse.urlparse(remote)
     l = 'https://'
 
@@ -35,8 +39,8 @@ class GitChangeReviewer(ChangeReviewer):
       l += self.get_cgit_web_link_path()
     elif 'github.com' in parsed.netloc:
       l += parsed.netloc
-      l += parsed.path
-      l += '/commit/{}'.format(self.upstream_sha['sha'])
+      l += re.sub('\.git$', '', parsed.path)
+      l += '/commit/{}'.format(self.upstream_ref.sha)
     elif 'anongit' in parsed.netloc:
       l += parsed.netloc.replace('anongit', 'cgit')
       l += parsed.path
@@ -45,7 +49,7 @@ class GitChangeReviewer(ChangeReviewer):
       l = 'http://' # whomp whomp
       l += parsed.netloc
       l += parsed.path
-      l += '/commit/{}'.format(self.upstream_sha['sha'])
+      l += '/commit/{}'.format(self.upstream_ref.sha)
     elif 'linuxtv.org' in parsed.netloc:
       l += 'git.linuxtv.org'
       l += parsed.path
@@ -69,13 +73,10 @@ class GitChangeReviewer(ChangeReviewer):
       self.review_result.add_review(ReviewType.MISSING_HASH, msg, vote=-1,
                                     notify=True)
 
-  def add_invalid_hash_review(self, hashes):
+  def add_invalid_hash_review(self, refs):
     msg = self.strings.INVALID_HASH_HEADER
-    for h in hashes:
-      remote_str = h['remote']
-      if h['branch']:
-        remote_str += ' branch {}'.format(h['branch'])
-      msg += self.strings.INVALID_HASH_LINE.format(h['sha'], remote_str)
+    for r in refs:
+      msg += self.strings.INVALID_HASH_LINE.format(str(r))
     msg += self.strings.INVALID_HASH_FOOTER
     msg += self.strings.HASH_EXAMPLE
     self.review_result.add_review(ReviewType.INVALID_HASH, msg, vote=-1,
@@ -102,52 +103,46 @@ class GitChangeReviewer(ChangeReviewer):
     self.review_result.add_review(ReviewType.BACKPORT, msg)
 
   def get_upstream_patch(self):
-    upstream_shas = self.reviewer.get_cherry_pick_shas_from_patch(
-                                    self.gerrit_patch)
-    if not upstream_shas:
+    upstream_refs = CommitRef.refs_from_patch(self.gerrit_patch)
+    if not upstream_refs:
       self.add_missing_hash_review()
       return
 
-    upstream_sha = None
-    for s in reversed(upstream_shas):
-      if not s['remote']:
-        s['remote'] = self.DEFAULT_REMOTE
-      if not s['branch']:
-        s['branch'] = self.DEFAULT_BRANCH
-      s['remote_name'] = self.reviewer.generate_remote_name(s['remote'])
+    for r in reversed(upstream_refs):
+      if not r.remote:
+        r.set_remote(self.DEFAULT_REMOTE)
+      if not r.branch:
+        r.branch = self.DEFAULT_BRANCH
 
-      self.reviewer.fetch_remote(s['remote_name'], s['remote'], s['branch'])
-
-      if not self.reviewer.is_sha_in_branch(s['sha'], s['remote_name'],
-                                            s['branch']):
+      self.reviewer.fetch_remote(r)
+      if not self.reviewer.is_sha_in_branch(r):
         continue
 
-      self.upstream_patch = self.reviewer.get_commit_from_sha(s['sha'])
-      self.upstream_sha = s
+      self.upstream_patch = self.reviewer.get_commit_from_sha(r)
+      self.upstream_ref = r
 
     if not self.upstream_patch:
-      self.add_invalid_hash_review(upstream_shas)
+      self.add_invalid_hash_review(upstream_refs)
       return
 
   def is_sha_in_mainline(self):
-    if not self.upstream_sha:
+    if not self.upstream_ref:
       return False
 
-    remote_name = self.reviewer.generate_remote_name(self.DEFAULT_REMOTE)
-    if remote_name != self.upstream_sha['remote_name']:
-        self.reviewer.fetch_remote(remote_name, self.DEFAULT_REMOTE,
-                                   self.DEFAULT_BRANCH)
-    return self.reviewer.is_sha_in_branch(self.upstream_sha['sha'], remote_name,
-                                          self.DEFAULT_BRANCH, skip_err=True)
+    mainline_ref = CommitRef(sha=self.upstream_ref.sha,
+                             remote=self.DEFAULT_REMOTE,
+                             branch=self.DEFAULT_BRANCH)
+
+    if mainline_ref.remote_name != self.upstream_ref.remote_name:
+        self.reviewer.fetch_remote(mainline_ref)
+
+    return self.reviewer.is_sha_in_branch(mainline_ref, skip_err=True)
 
   def get_patches(self):
     super().get_patches()
 
-    if self.upstream_patch and self.upstream_sha:
-      fixes_ref = self.reviewer.find_fixes_reference(
-                                  self.upstream_sha['sha'],
-                                  self.upstream_sha['remote_name'],
-                                  self.upstream_sha['branch'])
+    if self.upstream_patch and self.upstream_ref:
+      fixes_ref = self.reviewer.find_fixes_reference(self.upstream_ref)
       if fixes_ref:
         self.add_fixes_ref_review(fixes_ref)
 

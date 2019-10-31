@@ -26,6 +26,97 @@ class CallType(enum.Enum):
   CHECK_CALL = 1
   CALL = 2
 
+class CommitRef(object):
+  def __init__(self, sha, remote=None, branch=None):
+    self.sha = sha
+    self.set_remote(remote)
+    self.branch = branch
+
+  def set_remote(self, remote):
+    self.remote = remote
+    if self.remote:
+      self.remote_name = re.sub('([a-z]*\://)|\W', '', self.remote, flags=re.I)
+    else:
+      self.remote_name = None
+
+  def refs(self, use_remote=False):
+    if use_remote and self.remote_name and self.branch:
+      return '{}/{}'.format(self.remote_name, self.branch)
+    if self.branch:
+      return 'refs/heads/{}'.format(self.branch)
+    return None
+
+  def __str__(self):
+    ret = 'sha={}'.format(self.sha[:12])
+    if self.branch:
+      ret += ' branch={}'.format(self.branch)
+    if self.remote:
+      ret += ' remote={}'.format(self.remote)
+    return ret
+
+  def __repr__(self):
+    return self.__str__()
+
+  @staticmethod
+  def refs_from_patch(patch):
+    # This has pattern has gotten a bit hard to parse, so i'll do my best.
+
+    # Start with an opening paren and allow for whitespace
+    pattern = '\((?:\s*)'
+
+    # This is pretty easy, look the "cherry picked from commit" string taking
+    # into account space or dash between cherry and picked, and allowing for
+    # multiple spaces after commit.
+    pattern += 'cherry.picked from commit\s*'
+
+    # Then we grab the hexidecimal hash string. Everything after this is
+    # optional.
+    pattern += '([0-9a-f]*)'
+
+    # Wrap the optional group in parens
+    pattern += '('
+
+    # Optionally gobble up everything (including newlines) until we hit the next
+    # group. This allows for extra fluff in between the hash and URL (like an
+    # extra 'from' as seen in http://crosreview.com/1537900). Instead of just .*
+    # explicitly forbid matching ) since it could go looking through the source
+    # for a URL (like in http://crosreview.com/1544916). Finally, use a
+    # non-greedy algorithm to avoid gobbling the URL.
+    pattern += '[^\)]*?'
+
+    # This will match the remote url. It's pretty simple, just matches any
+    # protocol (git://, http://, https://, madeup://) and then match all
+    # non-whitespace characters, this is our remote.
+    pattern += '([a-z]*\://\S*)'
+
+    # Now that we have the URL, eat any whitespace again
+    pattern += '\s*'
+
+    # Now assume the next run of non-whitespace characters is the remote
+    # branch. Make it optional in case they want to use the default
+    # remote branch
+    pattern += '(\S*)?'
+
+    # Close the optional paren around remote/branch
+    pattern += ')?'
+
+    # Finally, account for any trailing whitespace
+    pattern += '\s*'
+
+    # Close the paren
+    pattern += '\)'
+
+    regex = re.compile(pattern, flags=(re.I | re.MULTILINE | re.DOTALL))
+    m = regex.findall(patch)
+    if not m or not len(m):
+      return None
+
+    ret = []
+    for s in m:
+      ret.append(CommitRef(sha=s[0], remote=s[2], branch=s[3]))
+
+    return ret
+
 class Reviewer(object):
   MAX_CONTEXT = 5
 
@@ -111,10 +202,10 @@ class Reviewer(object):
       raise ValueError('Invalid call type {}'.format(call_type))
     return None
 
-  def find_fixes_reference(self, sha, remote_name, branch):
+  def find_fixes_reference(self, ref):
     cmd = ['log', '--format=oneline', '--abbrev-commit', '-i', '--grep',
-           'Fixes:.*{}'.format(sha[:8]), '{}..{}/{}'.format(sha, remote_name,
-           branch)]
+           'Fixes:.*{}'.format(ref.sha[:8]), '{}..{}'.format(ref.sha,
+                                                             ref.refs(True))]
     return self.git(cmd, CallType.CHECK_OUTPUT)
 
   def get_am_from_from_patch(self, patch):
@@ -124,94 +215,26 @@ class Reviewer(object):
       return None
     return m
 
-  def get_cherry_pick_shas_from_patch(self, patch):
-    # This has pattern has gotten a bit hard to parse, so i'll do my best.
-
-    # Start with an opening paren and allow for whitespace
-    pattern = '\((?:\s*)'
-
-    # This is pretty easy, look the "cherry picked from commit" string taking
-    # into account space or dash between cherry and picked, and allowing for
-    # multiple spaces after commit.
-    pattern += 'cherry.picked from commit\s*'
-
-    # Then we grab the hexidecimal hash string. Everything after this is
-    # optional.
-    pattern += '([0-9a-f]*)'
-
-    # Wrap the optional group in parens
-    pattern += '('
-
-    # Optionally gobble up everything (including newlines) until we hit the next
-    # group. This allows for extra fluff in between the hash and URL (like an
-    # extra 'from' as seen in http://crosreview.com/1537900). Instead of just .*
-    # explicitly forbid matching ) since it could go looking through the source
-    # for a URL (like in http://crosreview.com/1544916). Finally, use a
-    # non-greedy algorithm to avoid gobbling the URL.
-    pattern += '[^\)]*?'
-
-    # This will match the remote url. It's pretty simple, just matches any
-    # protocol (git://, http://, https://, madeup://) and then match all
-    # non-whitespace characters, this is our remote.
-    pattern += '([a-z]*\://\S*)'
-
-    # Now that we have the URL, eat any whitespace again
-    pattern += '\s*'
-
-    # Now assume the next run of non-whitespace characters is the remote
-    # branch. Make it optional in case they don't specify remote branch
-    pattern += '(\S*)?'
-
-    # Close the optional paren around remote/branch
-    pattern += ')?'
-
-    # Finally, account for any trailing whitespace
-    pattern += '\s*'
-
-    # Close the paren
-    pattern += '\)'
-
-    regex = re.compile(pattern, flags=(re.I | re.MULTILINE | re.DOTALL))
-    m = regex.findall(patch)
-    if not m or not len(m):
-      return None
-    ret = []
-    for s in m:
-      ret.append({'sha': s[0],
-                  'remote': s[2] if len(s) > 2 else None,
-                  'branch': s[3] if len(s) > 3 else None})
-    return ret
-
-  def generate_remote_name(self, remote):
-    return re.sub('([a-z]*\://)|\W', '', remote, flags=re.I)
-
-  def add_or_update_remote(self, remote_name, remote):
-    cmd = ['remote', 'set-url', remote_name, remote]
+  def add_or_update_remote(self, ref):
+    cmd = ['remote', 'set-url', ref.remote_name, ref.remote]
     ret = self.git(cmd, CallType.CHECK_CALL)
     if ret == 0:
       return
 
-    cmd = ['remote', 'add', remote_name, remote]
+    cmd = ['remote', 'add', ref.remote_name, ref.remote]
     ret = self.git(cmd, CallType.CHECK_CALL)
     if ret != 0:
-      logger.error('Failed to add remote {} {} ({})', remote, remote_name, ret)
-      raise ValueError('Failed to add remote {} {} ({})', remote, remote_name,
-                       ret)
+      logger.error('Failed to add remote {} ({})', str(ref), ret)
 
-  def fetch_remote(self, remote_name, remote, branch):
-    logger.debug('Fetching {}/{} as {}'.format(remote, branch, remote_name))
+  def fetch_remote(self, ref):
+    logger.debug('Fetching {}'.format(str(ref)))
 
-    self.add_or_update_remote(remote_name, remote)
+    self.add_or_update_remote(ref)
 
-    try:
-      cmd = ['fetch', '--no-tags', '--prune', remote_name,
-             'refs/heads/' + branch]
-      self.git(cmd, CallType.CALL)
-    except Exception as e:
-      logger.error('Fetch remote ({}/{}) failed: ({})'.format(remote_name,
-                   branch, str(e)))
-      logger.exception('Exception fetching remote: {}'.format(e))
-      raise
+    cmd = ['fetch', '--prune', ref.remote_name, ref.refs()]
+    ret = self.git(cmd, CallType.CHECK_CALL, skip_err=True)
+    if ret != 0:
+      logger.error('Fetch remote ({}) failed: ({})'.format(str(ref), ret))
 
   def checkout(self, remote, branch, commit='FETCH_HEAD'):
     cmd = ['fetch', '--prune', remote, 'refs/heads/' + branch]
@@ -236,31 +259,29 @@ class Reviewer(object):
     commit_message = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
     # Use the last SHA found in the patch, since it's (probably) most recent,
     # and only return the SHA, not the remote/branch
-    return self.get_cherry_pick_shas_from_patch(commit_message)[-1]['sha']
+    return CommitRef.refs_from_patch(commit_message)[-1]['sha']
 
-  def is_sha_in_branch(self, sha, remote_name, branch, skip_err=False):
-    cmd = ['merge-base', '--is-ancestor', sha, '{}/{}'.format(remote_name,
-                                                              branch)]
+  def is_sha_in_branch(self, ref, skip_err=False):
+    cmd = ['merge-base', '--is-ancestor', ref.sha, ref.refs(True)]
     try:
       ret = self.git(cmd, CallType.CHECK_CALL, skip_err=True)
       return ret == 0
     except Exception as e:
       if not skip_err:
-        logger.error('git merge-base failed ({}/{}:{}): ({})'.format(remote_name,
-                     branch, sha, str(e)))
+        logger.error('git merge-base failed {}: ({})'.format(str(ref), str(e)))
         logger.exception('Exception checking sha: {}'.format(e))
         raise
 
-  def get_commit_from_sha(self, sha):
+  def get_commit_from_sha(self, ref):
     cmd = ['show', '--minimal', '-U{}'.format(self.MAX_CONTEXT), r'--format=%B',
-           sha]
+           ref.sha]
     ret = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
     return ret
 
   def get_commit_from_remote(self, remote, ref):
     cmd = ['fetch', '--prune', remote, ref]
     self.git(cmd, CallType.CHECK_CALL)
-    return self.get_commit_from_sha('FETCH_HEAD')
+    return self.get_commit_from_sha(CommitRef(sha='FETCH_HEAD'))
 
   def compare_diffs(self, a, b, context=0):
     if context > self.MAX_CONTEXT:
