@@ -26,6 +26,8 @@ class GitChangeReviewer(ChangeReviewer):
     ret = '/commit/?id={}'.format(self.upstream_ref.sha)
     if self.upstream_ref.branch:
       return ret + '&head={}'.format(self.upstream_ref.branch)
+    if self.upstream_ref.tag:
+      return ret + '&tag={}'.format(self.upstream_ref.tag)
     return ret
 
   def get_upstream_web_link(self):
@@ -111,7 +113,7 @@ class GitChangeReviewer(ChangeReviewer):
     for r in reversed(upstream_refs):
       if not r.remote:
         r.set_remote(self.DEFAULT_REMOTE)
-      if not r.branch:
+      if not r.branch and not r.tag:
         r.branch = self.DEFAULT_BRANCH
 
       self.reviewer.fetch_remote(r)

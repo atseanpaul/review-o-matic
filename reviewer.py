@@ -27,10 +27,11 @@ class CallType(enum.Enum):
   CALL = 2
 
 class CommitRef(object):
-  def __init__(self, sha, remote=None, branch=None):
+  def __init__(self, sha, remote=None, branch=None, tag=None):
     self.sha = sha
     self.set_remote(remote)
     self.branch = branch
+    self.tag = tag
 
   def set_remote(self, remote):
     self.remote = remote
@@ -44,12 +45,16 @@ class CommitRef(object):
       return '{}/{}'.format(self.remote_name, self.branch)
     if self.branch:
       return 'refs/heads/{}'.format(self.branch)
+    if self.tag:
+      return 'refs/tags/{}'.format(self.tag)
     return None
 
   def __str__(self):
     ret = 'sha={}'.format(self.sha[:12])
     if self.branch:
       ret += ' branch={}'.format(self.branch)
+    if self.tag:
+      ret += ' tag={}'.format(self.tag)
     if self.remote:
       ret += ' remote={}'.format(self.remote)
     return ret
@@ -92,9 +97,15 @@ class CommitRef(object):
     # Now that we have the URL, eat any whitespace again
     pattern += '\s*'
 
-    # Now assume the next run of non-whitespace characters is the remote
-    # branch. Make it optional in case they want to use the default
+    # The next run of non-whitespace characters could either be 'tag' or the
+    # remote branch. Make it optional in case they want to use the default
     # remote branch
+    pattern += '(\S*)?'
+
+    # Eat more whitespace, yum!
+    pattern += '\s*'
+
+    # Finally, if this is a tag, parse the tag name
     pattern += '(\S*)?'
 
     # Close the optional paren around remote/branch
@@ -113,7 +124,10 @@ class CommitRef(object):
 
     ret = []
     for s in m:
-      ret.append(CommitRef(sha=s[0], remote=s[2], branch=s[3]))
+      if s[3] == 'tag' and s[4]:
+        ret.append(CommitRef(sha=s[0], remote=s[2], tag=s[4]))
+      else:
+        ret.append(CommitRef(sha=s[0], remote=s[2], branch=s[3]))
 
     return ret
 
