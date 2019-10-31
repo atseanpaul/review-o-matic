@@ -100,6 +100,7 @@ class ReviewResult(object):
     msg += self.strings.GREETING.format(
                 self.change.current_revision.uploader_name,
                 random.choice(self.strings.GREETING_SWAG))
+    msg += self.strings.REVIEW_SEPARATOR
     msg += self.generate_issues()
     if len(self.issues) and len(self.feedback):
       msg += self.strings.REVIEW_SEPARATOR
