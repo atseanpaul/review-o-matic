@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom.configchecker')
 
 class KernelConfigChecker():
   def __init__(self, verbose=False, reviewer=None):

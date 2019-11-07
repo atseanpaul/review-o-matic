@@ -7,7 +7,7 @@ import requests
 import sys
 import urllib
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom.patchwork')
 
 class PatchworkInlineComment(object):
   def __init__(self):

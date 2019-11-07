@@ -9,7 +9,7 @@ from fuzzywuzzy import fuzz
 import logging
 import sys
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom.troll.reviewer.fromlist')
 
 class FromlistReviewStrings(ReviewStrings):
   CLEAN_BACKPORT_FOOTER='''

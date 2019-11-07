@@ -18,7 +18,7 @@ import requests
 import sys
 import time
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom')
 logger.setLevel(logging.DEBUG) # leave this to handlers
 
 class Troll(object):
@@ -207,7 +207,7 @@ class Troll(object):
 
 def setup_logging(args):
   info_handler = logging.StreamHandler(sys.stdout)
-  info_handler.setFormatter(logging.Formatter('%(levelname)8s - %(message)s'))
+  info_handler.setFormatter(logging.Formatter('%(levelname)6s - %(name)s - %(message)s'))
   if args.verbose:
     info_handler.setLevel(logging.DEBUG)
   else:

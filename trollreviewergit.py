@@ -8,7 +8,7 @@ import requests
 import sys
 import urllib
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom.troll.reviewer.git')
 
 class GitChangeReviewer(ChangeReviewer):
   DEFAULT_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'

@@ -5,7 +5,7 @@ import re
 import subprocess
 import sys
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('rom.reviewer')
 
 class LineType(enum.Enum):
   GITDIFF = 'diff --git '
