@@ -97,6 +97,7 @@ you'll have to do this review the old fashioned way!
 '''
   BACKPORT_DIFF='''
 This is expected, and this message is posted to make reviewing backports easier.
+
 '''
   FOUND_FIXES_REF_HEADER='''
  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

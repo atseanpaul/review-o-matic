@@ -245,7 +245,7 @@ class Reviewer(object):
 
     self.add_or_update_remote(ref)
 
-    cmd = ['fetch', '--prune', ref.remote_name, ref.refs()]
+    cmd = ['fetch', '--prune', '--tags', ref.remote_name, ref.refs()]
     ret = self.git(cmd, CallType.CHECK_CALL, skip_err=True)
     if ret != 0:
       logger.error('Fetch remote ({}) failed: ({})'.format(str(ref), ret))
