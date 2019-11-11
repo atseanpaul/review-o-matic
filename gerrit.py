@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
 import pprint
+import requests
 import urllib
 
 def parse_gerrit_timestamp(ts):
@@ -186,6 +187,17 @@ class Gerrit(object):
   def get_messages(self, change):
     uri = '/changes/{}/messages'.format(change.id)
     return self.rest.get(uri)
+
+  def remove_reviewer(self, change):
+    uri = '/changes/{}/reviewers/self/delete'.format(change.id)
+    options = {
+        'notify': 'NONE',
+    }
+    try:
+      self.rest.post(uri, data=options)
+      return True
+    except requests.exceptions.HTTPError as e:
+      return False
 
   def review(self, change, tag, message, notify_owner, vote_code_review=None,
              vote_verified=None, vote_cq_ready=None, inline_comments=None):
