@@ -205,6 +205,7 @@ class Gerrit(object):
         'tag': tag,
         'message': message,
         'notify': 'OWNER' if notify_owner else 'NONE',
+        'omit_duplicate_comments': True,
     }
 
     labels = {}
