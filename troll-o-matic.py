@@ -105,7 +105,7 @@ class Troll(object):
         if m.tag == self.tag and m.revision_num == c.current_revision.number:
           days_since_last_review = (datetime.datetime.utcnow() - m.date).days
 
-    if  days_since_last_review != None:
+    if days_since_last_review != None:
       logger.debug('    Reviewed {} days ago'.format(days_since_last_review))
 
     # Find a reviewer and blacklist if not found
