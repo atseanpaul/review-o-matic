@@ -231,7 +231,7 @@ class Reviewer(object):
 
   def add_or_update_remote(self, ref):
     cmd = ['remote', 'set-url', ref.remote_name, ref.remote]
-    ret = self.git(cmd, CallType.CHECK_CALL)
+    ret = self.git(cmd, CallType.CHECK_CALL, skip_err=True)
     if ret == 0:
       return
 
