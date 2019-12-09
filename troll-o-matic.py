@@ -79,7 +79,6 @@ class Troll(object):
     self.gerrit.review(change, self.tag, review.generate_review_message(),
                        review.notify, vote_code_review=review.vote,
                        inline_comments=review.inline_comments)
-    self.gerrit.remove_reviewer(change)
 
   def get_changes(self, prefix):
     message = '{}:'.format(prefix)
