@@ -99,7 +99,8 @@ class GerritChange(object):
         array.append(value)
 
   def url(self):
-    return '{}/c/{}/+/{}'.format(self.base_url, self.project, self.number)
+    return '{}/c/{}/+/{}/{}'.format(self.base_url, self.project, self.number,
+                                    self.current_revision.number)
 
   def is_merged(self):
     return self.status == 'MERGED'
