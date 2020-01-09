@@ -80,6 +80,12 @@ class Troll(object):
                        review.notify, vote_code_review=review.vote,
                        inline_comments=review.inline_comments)
 
+    if self.args.results_file:
+      with open(self.args.results_file, 'a+') as f:
+        f.write('{}: Issues: {}, Feedback: {}, Vote:{}, Notify:{}\n'.format(
+          change.url(), review.issues.keys(), review.feedback.keys(),
+          review.vote, review.notify))
+
   def get_changes(self, prefix):
     message = '{}:'.format(prefix)
     after = datetime.date.today() - datetime.timedelta(days=5)
@@ -247,6 +253,8 @@ def main():
   parser.add_argument('--force-prefix', default=None,
                       help='Only search for the provided prefix')
   parser.add_argument('--stats-file', default=None, help='Path to stats file')
+  parser.add_argument('--results-file', default=None,
+                      help='Path to results file')
   parser.add_argument('--kconfig-hound', default=None, action='store_true',
     help='Compute and post the total difference for kconfig changes')
   parser.add_argument('--err-logfile', default=None, help='Path to ERROR log')
