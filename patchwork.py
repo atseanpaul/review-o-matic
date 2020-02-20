@@ -103,6 +103,28 @@ class PatchworkComment(object):
   def __repr__(self):
     return self.__str__()
 
+class PatchworkSeries(object):
+  def __init__(self, url):
+    self.url = url
+
+  def get_patch_subjects(self):
+    patch = requests.get(self.url.geturl()).text.replace('\n','')
+    pattern = '<a'
+    pattern += '\s+'
+    pattern += 'href='
+    pattern += '"/patch/([0-9]+)/.*?"'
+    pattern += '\s*>\s*'
+    pattern += '\[\S*\] (.*?)'
+    pattern += '</a>'
+    regex = re.compile(pattern, flags=(re.I | re.MULTILINE | re.DOTALL))
+    m = regex.findall(patch)
+    if not m or not len(m):
+      return None
+    ret = []
+    for s in m:
+      ret.append(s[1])
+    return ret
+
 
 class PatchworkPatch(object):
   # Whitelisted patchwork hosts
@@ -137,6 +159,13 @@ class PatchworkPatch(object):
     self.id = int(m.group(2))
     self.patch = None
     self.comments = []
+
+  def get_series(self):
+    patch = requests.get(self.url.geturl()).text
+    m = re.findall('a href="/series/([0-9]+)/"', patch)
+    if not m or not len(m):
+      return None
+    return PatchworkSeries(self.url._replace(path='/series/{}/'.format(m[0])))
 
   def get_patch(self):
     if not self.patch:

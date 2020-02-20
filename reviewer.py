@@ -131,6 +131,19 @@ class CommitRef(object):
 
     return ret
 
+  @staticmethod
+  def links_from_patch(patch):
+    pattern = '\s*Link:\s+(\S+)'
+    regex = re.compile(pattern)
+    m = regex.findall(patch)
+    if not m or not len(m):
+      return None
+
+    ret = []
+    for s in m:
+      ret.append(s)
+    return ret
+
 class Reviewer(object):
   MAX_CONTEXT = 5
 
@@ -267,13 +280,30 @@ class Reviewer(object):
 
     self.git(cmd, CallType.CALL)
 
-  def get_cherry_pick_sha_from_local_sha(self, local_sha):
-    cmd = ['log', '-1', local_sha]
+  def get_commit_msg_from_sha(self, sha):
+    cmd = ['log', '-1', sha]
+    return self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
 
-    commit_message = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
+  def get_cherry_pick_sha_from_local_sha(self, local_sha):
+    commit_message = self.get_commit_msg_from_sha(local_sha)
+
     # Use the last SHA found in the patch, since it's (probably) most recent,
     # and only return the SHA, not the remote/branch
     return CommitRef.refs_from_patch(commit_message)[-1]['sha']
+
+  def get_links_from_local_sha(self, local_sha):
+    commit_message = self.get_commit_msg_from_sha(local_sha)
+
+    # Use the last SHA found in the patch, since it's (probably) most recent,
+    # and only return the SHA, not the remote/branch
+    return CommitRef.links_from_patch(commit_message)
+
+  def get_commit_from_subject(self, subject, surrounding_commit=None):
+    cmd = ['log', '-F', '--grep', subject, r'--format=%h %s']
+    if surrounding_commit:
+      cmd.append('{}~100..'.format(surrounding_commit))
+    ret = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None).strip()
+    return ret.splitlines()
 
   def is_sha_in_branch(self, ref, skip_err=False):
     cmd = ['merge-base', '--is-ancestor', ref.sha, ref.refs(True)]

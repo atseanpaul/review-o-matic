@@ -122,3 +122,32 @@ optional arguments:
 ```
 review-o-matic.py --start "$( git log --pretty=format:%H cros/chromeos-4.19.. | tail -n1 )"
 ```
+
+
+## relate-o-matic
+Given a commit hash, this script will find other patches in the same series.
+
+This requires that the given commit has a Link: tag in the commit message pointing to a whitelisted patchwork location.
+
+#### Usage
+```
+usage: relate-o-matic.py [-h] [--git-dir GIT_DIR] [--verbose] [--chatty]
+                         --commit COMMIT
+
+Get related patches
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --git-dir GIT_DIR  Path to git directory
+  --verbose          print commits
+  --chatty           print diffs
+  --commit COMMIT    commit hash to find related patches
+```
+
+#### Example Invocations
+
+```
+Find all commits in the series that contains commit d9facae6afe1
+
+relate-o-matic.py --git-dir ~/src/kernel --commit d9facae6afe1
+```
