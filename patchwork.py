@@ -1,4 +1,5 @@
 import collections
+import html
 import pathlib
 import json
 import logging
@@ -122,7 +123,7 @@ class PatchworkSeries(object):
       return None
     ret = []
     for s in m:
-      ret.append(s[1])
+      ret.append(html.unescape(s[1]))
     return ret
 
 
