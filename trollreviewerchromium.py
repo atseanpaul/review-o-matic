@@ -11,8 +11,8 @@ following way:
 '''
 
 class ChromiumChangeReviewer(ChangeReviewer):
-  def __init__(self, reviewer, change, dry_run, verbose):
-    super().__init__(reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, dry_run, verbose):
+    super().__init__(project, reviewer, change, dry_run)
     self.strings = ChromiumReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.review_backports = False
@@ -20,7 +20,10 @@ class ChromiumChangeReviewer(ChangeReviewer):
     self.config_diff = None
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
+  def can_review_change(project, change, days_since_last_review):
+    if not project.review_kconfig or 'CHROMIUM' not in project.prefixes:
+      return False
+
     return days_since_last_review == None and 'CHROMIUM' in change.subject
 
   def get_gerrit_patch(self):
@@ -29,7 +32,8 @@ class ChromiumChangeReviewer(ChangeReviewer):
                                          verbose=self.verbose)
 
     if kconfigchecker.is_config_change(self.gerrit_patch):
-      self.config_diff = kconfigchecker.get_kernel_configs(self.GERRIT_REMOTE,
+      self.config_diff = kconfigchecker.get_kernel_configs(
+                                      self.project.gerrit_remote_name,
                                       self.change.current_revision.ref)
 
     if self.config_diff:

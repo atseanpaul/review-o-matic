@@ -22,19 +22,27 @@ been applied to mainline. If your patch is in a maintainer tree, please use the
 '''
 
 class UpstreamChangeReviewer(GitChangeReviewer):
-  def __init__(self, reviewer, change, dry_run):
-    super().__init__(reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, dry_run):
+    super().__init__(project, reviewer, change, dry_run)
     self.strings = UpstreamReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
-    # labeled UPSTREAM or labeled BACKPORT
-    return (days_since_last_review == None and
-            ('UPSTREAM' in change.subject or
-             ('BACKPORT' in change.subject and
-              'FROMGIT' not in change.subject and
-              'FROMLIST' not in change.subject)))
+  def can_review_change(project, change, days_since_last_review):
+    # No timed re-review on upstream patches
+    if days_since_last_review != None:
+      return False
+
+    if 'UPSTREAM' in project.prefixes and 'UPSTREAM' in change.subject:
+      return True
+
+    if ('BACKPORT' in project.prefixes and
+        'BACKPORT' in change.subject and
+        'FROMGIT' not in change.subject and
+        'FROMLIST' not in change.subject):
+      return True
+
+    return False
 
   def add_patch_not_in_mainline_review(self):
     msg = self.strings.PATCH_NOT_IN_MAINLINE.format(

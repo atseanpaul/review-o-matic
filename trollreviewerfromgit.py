@@ -32,31 +32,20 @@ the link below on backporting for more information.
 '''
 
 class FromgitChangeReviewer(GitChangeReviewer):
-  REMOTE_BLACKLIST=[
-      {
-        'name': 'linux-next',
-        're': '.*?://git\.kernel\.org/pub/scm/linux/kernel/git/next/.*?\.git'
-      },
-      {
-        'name': 'drm-tip',
-        're': '.*?://(anon)?git\.freedesktop\.org/(git/)?drm-tip(\.git)?'
-      },
-      {
-        'name': 'drm-tip',
-        're': '.*?://github\.com/freedesktop/drm-tip(\.git)?'
-      }
-  ]
-
-  def __init__(self, reviewer, change, dry_run, days_since_last_review):
-    super().__init__(reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, dry_run,
+               days_since_last_review):
+    super().__init__(project, reviewer, change, dry_run)
     self.strings = FromgitReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.days_since_last_review = days_since_last_review
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
-    return ('FROMGIT' in change.subject and
-            (days_since_last_review == None or days_since_last_review >= 14))
+  def can_review_change(project, change, days_since_last_review):
+    # Don't re-review for 14 days
+    if days_since_last_review != None and days_since_last_review < 14:
+      return False
+
+    return 'FROMGIT' in project.prefixes and 'FROMGIT' in change.subject
 
   def add_patch_in_mainline_review(self):
     self.review_result.add_review(ReviewType.IN_MAINLINE,
@@ -67,8 +56,8 @@ class FromgitChangeReviewer(GitChangeReviewer):
     if not self.upstream_ref:
       return False
 
-    for b in self.REMOTE_BLACKLIST:
-      if re.match(b['re'], self.upstream_ref.remote, re.I):
+    for b in self.project.blacklist:
+      if re.match(b, self.upstream_ref.remote, re.I):
         return True
     return False
 

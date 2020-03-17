@@ -128,16 +128,7 @@ class PatchworkSeries(object):
 
 
 class PatchworkPatch(object):
-  # Whitelisted patchwork hosts
-  PATCHWORK_WHITELIST = [
-    { 'netloc': 'lore.kernel.org', 'path': 'patchwork', 'has_comments': True },
-    { 'netloc': 'patchwork.freedesktop.org', 'path': '', 'has_comments': False},
-    { 'netloc': 'patchwork.kernel.org', 'path': '', 'has_comments': True },
-    { 'netloc': 'patchwork.linuxtv.org', 'path': '', 'has_comments': True },
-    { 'netloc': 'patchwork.ozlabs.org', 'path': '', 'has_comments': True }
-  ]
-
-  def __init__(self, url):
+  def __init__(self, whitelist, url):
     parsed = urllib.parse.urlparse(url)
 
     m = re.match('/([a-z/]*)/([0-9]*)/?', parsed.path)
@@ -146,10 +137,10 @@ class PatchworkPatch(object):
       raise ValueError('Invalid url')
 
     found = False
-    for i in self.PATCHWORK_WHITELIST:
-      if parsed.netloc == i['netloc']:
-        self.path_prefix = i['path']
-        self.comments_supported = i['has_comments']
+    for i in whitelist:
+      if parsed.netloc == i.host:
+        self.path_prefix = i.path
+        self.comments_supported = i.has_comments
         found = True
         break
     if not found:

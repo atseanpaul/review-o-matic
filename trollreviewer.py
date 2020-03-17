@@ -4,8 +4,8 @@ import random
 import re
 
 class ChangeReviewer(object):
-  GERRIT_REMOTE = 'cros'
-  def __init__(self, reviewer, change, dry_run):
+  def __init__(self, project, reviewer, change, dry_run):
+    self.project = project
     self.reviewer = reviewer
     self.is_backport = 'BACKPORT' in change.subject
     self.is_fixup = 'FIXUP' in change.subject
@@ -19,7 +19,7 @@ class ChangeReviewer(object):
     self.diff = None
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
+  def can_review_change(project, change, days_since_last_review):
     raise NotImplementedError()
 
   def format_diff(self):
@@ -57,7 +57,8 @@ class ChangeReviewer(object):
     for i in range(0, 4):
       try:
         self.gerrit_patch = self.reviewer.get_commit_from_remote(
-                                  self.GERRIT_REMOTE, self.change.current_revision.ref)
+                                  self.project.gerrit_remote_name,
+                                  self.change.current_revision.ref)
         return True
       except:
         continue

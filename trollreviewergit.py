@@ -11,15 +11,12 @@ import urllib
 logger = logging.getLogger('rom.troll.reviewer.git')
 
 class GitChangeReviewer(ChangeReviewer):
-  DEFAULT_REMOTE='git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git'
-  DEFAULT_BRANCH='master'
-
-  def __init__(self, reviewer, change, dry_run):
-    super().__init__(reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, dry_run):
+    super().__init__(project, reviewer, change, dry_run)
     self.upstream_ref = None
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
+  def can_review_change(project, change, days_since_last_review):
     raise NotImplementedError()
 
   def get_cgit_web_link_path(self):
@@ -57,7 +54,7 @@ class GitChangeReviewer(ChangeReviewer):
       l += parsed.path
       l += self.get_cgit_web_link_path()
     else:
-      logger.error('Could not parse web link for {}'.format(remote))
+      logger.warning('Could not parse web link for {}'.format(remote))
       return
 
     r = requests.get(l)
@@ -112,9 +109,9 @@ class GitChangeReviewer(ChangeReviewer):
 
     for r in reversed(upstream_refs):
       if not r.remote:
-        r.set_remote(self.DEFAULT_REMOTE)
+        r.set_remote(self.project.mainline_repo)
       if not r.branch and not r.tag:
-        r.branch = self.DEFAULT_BRANCH
+        r.branch = self.project.mainline_branch
 
       self.reviewer.fetch_remote(r)
       if not self.reviewer.is_sha_in_branch(r):
@@ -132,8 +129,8 @@ class GitChangeReviewer(ChangeReviewer):
       return False
 
     mainline_ref = CommitRef(sha=self.upstream_ref.sha,
-                             remote=self.DEFAULT_REMOTE,
-                             branch=self.DEFAULT_BRANCH)
+                             remote=self.project.mainline_repo,
+                             branch=self.project.mainline_branch)
 
     if mainline_ref.remote_name != self.upstream_ref.remote_name:
         self.reviewer.fetch_remote(mainline_ref)

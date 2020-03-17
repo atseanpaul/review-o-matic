@@ -32,8 +32,8 @@ below.
   From {} <{}>: {}'''
 
 class FromlistChangeReviewer(ChangeReviewer):
-  def __init__(self, reviewer, change, dry_run):
-    super().__init__(reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, dry_run):
+    super().__init__(project, reviewer, change, dry_run)
     self.strings = FromlistReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.review_backports = False
@@ -41,8 +41,12 @@ class FromlistChangeReviewer(ChangeReviewer):
     self.patchwork_comments = None
 
   @staticmethod
-  def can_review_change(change, days_since_last_review):
-    return days_since_last_review == None and 'FROMLIST' in change.subject
+  def can_review_change(project, change, days_since_last_review):
+    # No timed re-review on upstream patches
+    if days_since_last_review != None:
+      return False
+
+    return 'FROMLIST' in project.prefixes and 'FROMLIST' in change.subject
 
   def add_missing_am_review(self, change):
     self.review_result.add_review(ReviewType.MISSING_AM,
@@ -86,7 +90,7 @@ class FromlistChangeReviewer(ChangeReviewer):
 
     for u in reversed(patchwork_url):
       try:
-        patchwork_patch = PatchworkPatch(u)
+        patchwork_patch = PatchworkPatch(self.project.patchworks, u)
         self.upstream_patch = patchwork_patch.get_patch()
         self.patchwork_patch = patchwork_patch
         break
