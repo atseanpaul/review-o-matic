@@ -8,35 +8,40 @@ In its current form, the script is hardcoded to target the kernel git repository
 
 #### Usage
 ```
-usage: troll-o-matic.py [-h] [--git-dir GIT_DIR] [--verbose] [--chatty]
-                        [--daemon] [--dry-run] [--force-cl FORCE_CL]
-                        [--stats-file STATS_FILE]
+usage: troll-o-matic.py [-h] [--verbose] [--chatty] [--daemon] [--dry-run]
+                        [--force-cl FORCE_CL] [--force-rev FORCE_REV]
+                        [--force-all] [--force-prefix FORCE_PREFIX]
+                        [--force-project FORCE_PROJECT] [--config CONFIG]
 
 Troll gerrit reviews
 
 optional arguments:
   -h, --help            show this help message and exit
-  --git-dir GIT_DIR     Path to git directory
   --verbose             print commits
   --chatty              print diffs
   --daemon              Run in daemon mode, for continuous trolling
   --dry-run             skip the review step
   --force-cl FORCE_CL   Force review a CL
-  --stats-file STATS_FILE
-                        Path to stats file
-
-
+  --force-rev FORCE_REV
+                        Specify a specific revision of the force-cl to review
+                        (ignored if force-cl is not true)
+  --force-all           Force review all (implies dry-run)
+  --force-prefix FORCE_PREFIX
+                        Only search for the provided prefix
+  --force-project FORCE_PROJECT
+                        Only search for changes in the provided project
+  --config CONFIG       Path to config file
 ```
 
 #### Example Invocations
 Daemon mode:
 ```
-troll-o-matic.py --git-dir ~/s/review_repo/ --daemon --stats-file ~/review_stats/review_stats.json
+troll-o-matic.py --config config.ini --daemon
 ```
 
 Target a CL for testing:
 ```
-troll-o-matic.py --git-dir ~/s/review_repo/ --force-cl 1487385 --dry-run
+troll-o-matic.py --config config.ini --force-cl 1487385 --dry-run
 ```
 
 
