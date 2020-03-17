@@ -42,7 +42,7 @@ class FromlistChangeReviewer(ChangeReviewer):
 
   @staticmethod
   def can_review_change(project, change, days_since_last_review):
-    # No timed re-review on upstream patches
+    # No timed re-review on fromlist patches
     if days_since_last_review != None:
       return False
 
