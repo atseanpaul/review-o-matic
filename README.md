@@ -2,9 +2,10 @@
 This projects includes a few scripts to help review and submit gerrit patches.
 
 ## troll-o-matic
-This script trolls gerrit for BACKPORT/UPSTREAM/FROMGIT prefixed changes and compares the downstream backport with the upstream source. If a difference between upstream and downstream is detected, the script will print the difference between patches for the human reviewer to validate. The script also checks that the required fields are present in the commit message and checks upstream git logs for "Fixes:" references in case the backport has a bug which is already fixed upstream.
+This script trolls gerrit for BACKPORT/UPSTREAM/FROMGIT/FROMLIST prefixed changes and compares the downstream backport with the upstream source. If a difference between upstream and downstream is detected, the script will print the difference between patches for the human reviewer to validate. The script also checks that the required fields are present in the commit message and checks upstream git logs for "Fixes:" references in case the backport has a bug which is already fixed upstream.
 
-In its current form, the script is hardcoded to target the kernel git repository on crosreview.com
+A sample config is available in the repository under config.sample.ini.
+
 
 #### Usage
 ```
