@@ -17,7 +17,8 @@ TrollConfigProject = collections.namedtuple('TrollConfigProject',
                                               'review_kconfig',
                                               'prefixes',
                                               'patchworks',
-                                              'blacklist'
+                                              'blacklist',
+                                              'ignore_branches',
                                             ])
 
 TrollConfigPatchwork = collections.namedtuple('TrollConfigPatchwork',
@@ -71,6 +72,13 @@ class TrollConfig(object):
         continue
       blacklist.append(self.config.get('blacklist_{}'.format(b), 'Regex'))
 
+    ignore_branches = []
+    for b in self.config.get(sec, 'IgnoreBranches', fallback='').split(','):
+      if not b:
+        continue
+      ignore_branches.append(self.config.get('ignorebranch_{}'.format(b),
+                                            'Regex'))
+
     return TrollConfigProject(self.config.get(sec, 'Name'),
                               self.config.get(sec, 'GerritProject'),
                               self.config.get(sec, 'MainlineLocation'),
@@ -79,7 +87,7 @@ class TrollConfig(object):
                               self.config.get(sec, 'GerritRemoteName'),
                               self.config.getboolean(sec, 'ReviewKconfig',
                                                      fallback=False),
-                              prefixes, patchworks, blacklist)
+                              prefixes, patchworks, blacklist, ignore_branches)
 
   def build_patchwork(self, sec):
     return TrollConfigPatchwork(self.config.get(sec, 'Name'),

@@ -59,6 +59,7 @@ class GerritChange(object):
     self.status = rest['status']
     self.subject = rest['subject']
     self.project = rest['project']
+    self.branch = rest['branch']
     self.current_revision = GerritRevision(
             rest['current_revision'],
             rest['revisions'][rest['current_revision']])

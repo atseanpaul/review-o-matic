@@ -16,6 +16,7 @@ import datetime
 import json
 import logging
 from logging import handlers
+import re
 import requests
 import sys
 import time
@@ -115,6 +116,16 @@ class Troll(object):
                    chatty=self.config.chatty)
     ret = 0
     for c in changes:
+      ignore = False
+      for b in project.ignore_branches:
+        if re.match(b, c.branch):
+          ignore = True
+          break
+      if ignore:
+        logger.debug('Ignoring change {}'.format(c))
+        self.add_change_to_blacklist(c)
+        continue
+
       try:
         result = self.process_change(project, rev, c)
         if result:
