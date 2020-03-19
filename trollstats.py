@@ -55,4 +55,4 @@ class TrollStats(object):
       return
     logger.debug('Saving stats to {}'.format(self.filepath))
     with open(self.filepath, 'wt') as f:
-      json.dump(self.stats, f)
+      json.dump(self.stats, f, sort_keys=True, indent=2)
