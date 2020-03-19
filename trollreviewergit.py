@@ -53,6 +53,14 @@ class GitChangeReviewer(ChangeReviewer):
       l += 'git.linuxtv.org'
       l += parsed.path
       l += self.get_cgit_web_link_path()
+    elif 'w1.fi' in parsed.netloc:
+      tree = re.match('/srv/git/(.*)\.git$', parsed.path)
+      if not tree:
+        logger.warning('Unexpected w1.fi remote {}'.format(remote))
+        return
+      l += 'w1.fi'
+      l += '/cgit/{}'.format(tree.group(1))
+      l += self.get_cgit_web_link_path()
     else:
       logger.warning('Could not parse web link for {}'.format(remote))
       return
