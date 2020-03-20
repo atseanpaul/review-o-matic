@@ -93,14 +93,21 @@ class Troll(object):
     # Find a reviewer and blacklist if not found
     reviewer = None
     if FromlistChangeReviewer.can_review_change(project, c, age_days):
-      reviewer = FromlistChangeReviewer(project, rev, c, self.config.dry_run)
+      reviewer = FromlistChangeReviewer(project, rev, c,
+                                        self.config.gerrit_msg_limit,
+                                        self.config.dry_run)
     elif FromgitChangeReviewer.can_review_change(project, c, age_days):
-      reviewer = FromgitChangeReviewer(project, rev, c, self.config.dry_run,
-                                       age_days)
+      reviewer = FromgitChangeReviewer(project, rev, c,
+                                       self.config.gerrit_msg_limit,
+                                       self.config.dry_run, age_days)
     elif UpstreamChangeReviewer.can_review_change(project, c, age_days):
-      reviewer = UpstreamChangeReviewer(project, rev, c, self.config.dry_run)
+      reviewer = UpstreamChangeReviewer(project, rev, c,
+                                        self.config.gerrit_msg_limit,
+                                        self.config.dry_run)
     elif ChromiumChangeReviewer.can_review_change(project, c, age_days):
-      reviewer = ChromiumChangeReviewer(project, rev, c, self.config.dry_run,
+      reviewer = ChromiumChangeReviewer(project, rev, c,
+                                        self.config.gerrit_msg_limit,
+                                        self.config.dry_run,
                                         self.config.verbose)
     if not reviewer:
       self.add_change_to_blacklist(c)

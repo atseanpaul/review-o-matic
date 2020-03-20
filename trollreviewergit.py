@@ -11,8 +11,8 @@ import urllib
 logger = logging.getLogger('rom.troll.reviewer.git')
 
 class GitChangeReviewer(ChangeReviewer):
-  def __init__(self, project, reviewer, change, dry_run):
-    super().__init__(project, reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, msg_limit, dry_run):
+    super().__init__(project, reviewer, change, msg_limit, dry_run)
     self.upstream_ref = None
 
   @staticmethod

@@ -22,8 +22,8 @@ been applied to mainline. If your patch is in a maintainer tree, please use the
 '''
 
 class UpstreamChangeReviewer(GitChangeReviewer):
-  def __init__(self, project, reviewer, change, dry_run):
-    super().__init__(project, reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, msg_limit, dry_run):
+    super().__init__(project, reviewer, change, msg_limit, dry_run)
     self.strings = UpstreamReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
 

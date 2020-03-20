@@ -32,9 +32,9 @@ the link below on backporting for more information.
 '''
 
 class FromgitChangeReviewer(GitChangeReviewer):
-  def __init__(self, project, reviewer, change, dry_run,
+  def __init__(self, project, reviewer, change, msg_limit, dry_run,
                days_since_last_review):
-    super().__init__(project, reviewer, change, dry_run)
+    super().__init__(project, reviewer, change, msg_limit, dry_run)
     self.strings = FromgitReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.days_since_last_review = days_since_last_review

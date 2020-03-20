@@ -4,13 +4,14 @@ import random
 import re
 
 class ChangeReviewer(object):
-  def __init__(self, project, reviewer, change, dry_run):
+  def __init__(self, project, reviewer, change, msg_limit, dry_run):
     self.project = project
     self.reviewer = reviewer
     self.is_backport = 'BACKPORT' in change.subject
     self.is_fixup = 'FIXUP' in change.subject
     self.is_revert = change.subject.startswith('Revert ')
     self.change = change
+    self.msg_limit = msg_limit
     self.dry_run = dry_run
     self.gerrit_patch = None
     self.upstream_patch = None
@@ -23,9 +24,17 @@ class ChangeReviewer(object):
     raise NotImplementedError()
 
   def format_diff(self):
+    # Leave room for boilerplate and other review feedback, 2k chars for now
+    max_size = self.msg_limit - 2048
     msg = ''
     for l in self.diff:
       msg += '  {}\n'.format(l)
+
+    if len(msg) > max_size:
+      trunc_msg = '\n\n  !!!! Diff truncated !!!!'
+      msg = msg[:(max_size - len(trunc_msg))]
+      msg += trunc_msg
+
     return msg
 
   def add_successful_review(self):

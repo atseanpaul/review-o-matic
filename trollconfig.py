@@ -44,6 +44,7 @@ class TrollConfig(object):
 
   def parse_globals(self):
     self.gerrit_url = self.config.get('global', 'GerritUrl')
+    self.gerrit_msg_limit = self.config.getint('global', 'GerritMsgLimit')
     self.stats_file = self.config.get('global', 'StatsFile', fallback=None)
     self.results_file = self.config.get('global', 'ResultsFile', fallback=None)
     self.log_file = self.config.get('global', 'LogFile', fallback=None)

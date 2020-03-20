@@ -11,8 +11,9 @@ following way:
 '''
 
 class ChromiumChangeReviewer(ChangeReviewer):
-  def __init__(self, project, reviewer, change, dry_run, verbose):
-    super().__init__(project, reviewer, change, dry_run)
+  def __init__(self, project, reviewer, change, msg_limit, dry_run,
+               verbose):
+    super().__init__(project, reviewer, change, msg_limit, dry_run)
     self.strings = ChromiumReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
     self.review_backports = False
