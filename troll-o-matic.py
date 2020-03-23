@@ -169,10 +169,11 @@ class Troll(object):
             changes = self.get_changes(project, p)
             logger.debug('{} changes for prefix {}'.format(len(changes), p))
             did_review += self.process_changes(project, changes)
-          if did_review > 0:
-            self.stats.summarize(logging.INFO)
-            if not self.config.dry_run:
-              self.stats.save()
+
+        if did_review > 0:
+          self.stats.summarize(logging.INFO)
+          if not self.config.dry_run:
+            self.stats.save()
 
         if not self.config.daemon:
           return
