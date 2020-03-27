@@ -19,6 +19,7 @@ TrollConfigProject = collections.namedtuple('TrollConfigProject',
                                               'patchworks',
                                               'blacklist',
                                               'ignore_branches',
+                                              'ignore_sob',
                                             ])
 
 TrollConfigPatchwork = collections.namedtuple('TrollConfigPatchwork',
@@ -88,7 +89,9 @@ class TrollConfig(object):
                               self.config.get(sec, 'GerritRemoteName'),
                               self.config.getboolean(sec, 'ReviewKconfig',
                                                      fallback=False),
-                              prefixes, patchworks, blacklist, ignore_branches)
+                              prefixes, patchworks, blacklist, ignore_branches,
+                              self.config.getboolean(sec, 'IgnoreSignedOffBy',
+                                                     fallback=False))
 
   def build_patchwork(self, sec):
     return TrollConfigPatchwork(self.config.get(sec, 'Name'),

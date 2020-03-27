@@ -91,6 +91,10 @@ class ChangeReviewer(object):
                                 cur_rev.uploader_name))
     sob_email_re = re.compile('Signed-off-by:.*?<{}>'.format(
                                 cur_rev.uploader_email))
+
+    if self.project.ignore_sob:
+      fields['sob'] = True
+
     for l in cur_rev.commit_message.splitlines():
       if l.startswith('BUG='):
         fields['bug'] = True
