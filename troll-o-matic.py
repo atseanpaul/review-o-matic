@@ -154,7 +154,6 @@ class Troll(object):
       if not project:
         raise ValueError('Could not find project!')
       self.process_changes(project, [c])
-      self.stats.summarize(logging.INFO)
       return
 
     while True:
