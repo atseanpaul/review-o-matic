@@ -118,6 +118,7 @@ class GerritChange(object):
 class Gerrit(object):
   def __init__(self, url, use_internal=False):
     auth = AuthFromNetrc(url, use_internal)
+    self.timeout = 90
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
     self.change_options = ['CURRENT_REVISION', 'MESSAGES', 'DETAILED_LABELS',
@@ -129,7 +130,7 @@ class Gerrit(object):
       options += ['ALL_REVISIONS']
     uri = '/changes/{}?o={}'.format(change_id, '&o='.join(options))
 
-    rest = self.rest.get(uri)
+    rest = self.rest.get(uri, timeout=self.timeout)
     c = GerritChange(self.url, rest)
 
     # The modifications to change here shouldn't be relied upon, but rolling
@@ -138,7 +139,7 @@ class Gerrit(object):
     # nothing downstream of us gets too confused
     if rev_num != None:
       uri = '/changes/{}/revisions/{}/commit'.format(change_id, rev_num)
-      rest = self.rest.get(uri)
+      rest = self.rest.get(uri, timeout=self.timeout)
       for r in c.revisions:
         if int(r.number) != int(rev_num):
           continue
@@ -151,7 +152,7 @@ class Gerrit(object):
   def get_related_changes(self, change):
     uri = '/changes/{}/revisions/current/related'.format(change.id)
     changes = []
-    for c in self.rest.get(uri)['changes']:
+    for c in self.rest.get(uri, timeout=self.timeout)['changes']:
       changes.append(self.get_change(c['change_id']))
     return changes
 
@@ -177,18 +178,18 @@ class Gerrit(object):
     uri = '/changes/?q={}&o={}'.format('+'.join(query),
                                        '&o='.join(self.change_options))
     changes = []
-    for c in self.rest.get(uri):
+    for c in self.rest.get(uri, timeout=self.timeout):
       changes.append(GerritChange(self.url, c))
     return changes
 
   def get_patch(self, change):
     uri = '/changes/{}/revisions/{}/patch'.format(change.id,
                                                   change.current_revision.id)
-    return self.rest.get(uri)
+    return self.rest.get(uri, timeout=self.timeout)
 
   def get_messages(self, change):
     uri = '/changes/{}/messages'.format(change.id)
-    return self.rest.get(uri)
+    return self.rest.get(uri, timeout=self.timeout)
 
   def remove_reviewer(self, change):
     uri = '/changes/{}/reviewers/self/delete'.format(change.id)
@@ -196,7 +197,7 @@ class Gerrit(object):
         'notify': 'NONE',
     }
     try:
-      self.rest.post(uri, data=options)
+      self.rest.post(uri, data=options, timeout=self.timeout)
       return True
     except requests.exceptions.HTTPError as e:
       return False
@@ -226,6 +227,9 @@ class Gerrit(object):
 
     #pprint.PrettyPrinter(indent=4).pprint(review)
     #pprint.PrettyPrinter(indent=4).pprint(json.dumps(review))
-    return self.rest.review(change.id, change.current_revision.id,
-                            json.dumps(review))
+    uri = "changes/{}/revisions/{}/review".format(change.id,
+                                                  change.current_revision.id)
+    return self.rest.post(uri, data=json.dumps(review),
+                          headers={"Content-Type": "application/json"},
+                          timeout=self.timeout)
 
