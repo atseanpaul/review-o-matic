@@ -13,6 +13,13 @@ The following issue was found with your patch:
   FOUND_ISSUES_HEADER_MULTIPLE='''
 The following issues were found with your patch:
 '''
+  FOUND_ISSUES_RETRY='''
+>>>>>>> Want to retry?
+
+If you suspect the issue(s) found are a result of a bug in this review script
+as opposed to your patch, respond with "{}" and the reviewer will
+re-evaluate your change.
+'''
   SUCCESS='''
 No changes have been detected between this change and its upstream source!
 '''

@@ -25,6 +25,8 @@ logger = logging.getLogger('rom')
 logger.setLevel(logging.DEBUG) # leave this to handlers
 
 class Troll(object):
+  RETRY_REVIEW_KEY='!!retry-bot-review!!'
+
   def __init__(self, config):
     self.config = config
     self.gerrit = Gerrit(config.gerrit_url)
@@ -39,7 +41,7 @@ class Troll(object):
         review.notify))
 
     if review.dry_run:
-      print(review.generate_review_message())
+      print(review.generate_review_message(self.RETRY_REVIEW_KEY))
       if review.inline_comments:
         print('')
         print('-- Inline comments:')
@@ -53,7 +55,8 @@ class Troll(object):
 
     self.stats.update_for_review(project, review)
 
-    self.gerrit.review(change, self.tag, review.generate_review_message(),
+    self.gerrit.review(change, self.tag,
+                       review.generate_review_message(self.RETRY_REVIEW_KEY),
                        review.notify, vote_code_review=review.vote,
                        inline_comments=review.inline_comments)
 
@@ -81,11 +84,25 @@ class Troll(object):
 
     force_review = self.config.force_cl or self.config.force_all
 
+    last_review = None
+    retry_request = None
+    # Look for prior reviews and retry requests
+    for m in sorted(c.messages, key=lambda msg: msg.date):
+      if not m.revision_num == c.current_revision.number:
+        continue
+      if m.tag == self.tag:
+        last_review = m
+      elif self.RETRY_REVIEW_KEY in m.message:
+        retry_request = m
+
+    # Received a retry request
+    if retry_request and retry_request.date > last_review.date:
+      logger.error('Received retry request on change {}'.format(c.url()))
+      force_review = True
+
     age_days = None
-    if not force_review:
-      for m in c.messages:
-        if m.tag == self.tag and m.revision_num == c.current_revision.number:
-          age_days = (datetime.datetime.utcnow() - m.date).days
+    if not force_review and last_review:
+      age_days = (datetime.datetime.utcnow() - last_review.date).days
 
     if age_days != None:
       logger.debug('    Reviewed {} days ago'.format(age_days))

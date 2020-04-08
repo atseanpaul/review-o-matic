@@ -61,7 +61,7 @@ class ReviewResult(object):
   def add_web_link(self, link):
     self.web_link = link
 
-  def generate_issues(self):
+  def generate_issues(self, retry_key):
     num_issues = len(self.issues)
     if not num_issues:
       return ''
@@ -75,6 +75,9 @@ class ReviewResult(object):
       if num_issues > 1:
         msg += self.strings.ISSUE_SEPARATOR.format(j + 1)
       msg += i
+
+    msg += self.strings.FOUND_ISSUES_RETRY.format(retry_key)
+
     return msg
 
   def generate_feedback(self):
@@ -95,13 +98,13 @@ class ReviewResult(object):
       msg += f
     return msg
 
-  def generate_review_message(self):
+  def generate_review_message(self, retry_key):
     msg = self.strings.HEADER
     msg += self.strings.GREETING.format(
                 self.change.current_revision.uploader_name,
                 random.choice(self.strings.GREETING_SWAG))
     msg += self.strings.REVIEW_SEPARATOR
-    msg += self.generate_issues()
+    msg += self.generate_issues(retry_key)
     if len(self.issues) and len(self.feedback):
       msg += self.strings.REVIEW_SEPARATOR
     msg += self.generate_feedback()
