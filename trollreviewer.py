@@ -8,8 +8,6 @@ class ChangeReviewer(object):
     self.project = project
     self.reviewer = reviewer
     self.is_backport = 'BACKPORT' in change.subject
-    self.is_fixup = 'FIXUP' in change.subject
-    self.is_revert = change.subject.startswith('Revert ')
     self.change = change
     self.msg_limit = msg_limit
     self.dry_run = dry_run
@@ -21,7 +19,10 @@ class ChangeReviewer(object):
 
   @staticmethod
   def can_review_change(project, change, days_since_last_review):
-    raise NotImplementedError()
+    # Don't review these patches (yet)
+    if 'FIXUP' in change.subject or change.subject.startswith('Revert '):
+      return False
+    return True
 
   def format_diff(self):
     # Leave room for boilerplate and other review feedback, 2k chars for now
@@ -130,10 +131,6 @@ class ChangeReviewer(object):
       self.compare_patches_clean()
 
   def review_patch(self):
-    # Don't review these patches (yet)
-    if self.is_fixup or self.is_revert:
-      return None
-
     self.get_patches()
     self.validate_commit_message()
     if self.gerrit_patch and self.upstream_patch:

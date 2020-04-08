@@ -5,6 +5,7 @@ from gerrit import Gerrit, GerritRevision, GerritMessage
 
 from trollconfig import TrollConfig
 from trollreview import ReviewType
+from trollreviewer import ChangeReviewer
 from trollreviewerfromgit import FromgitChangeReviewer
 from trollreviewerupstream import UpstreamChangeReviewer
 from trollreviewerfromlist import FromlistChangeReviewer
@@ -109,7 +110,10 @@ class Troll(object):
 
     # Find a reviewer and blacklist if not found
     reviewer = None
-    if FromlistChangeReviewer.can_review_change(project, c, age_days):
+    if not ChangeReviewer.can_review_change(project, c, age_days):
+      # Some patches are blanket unreviewable, check these first
+      reviewer = None
+    elif FromlistChangeReviewer.can_review_change(project, c, age_days):
       reviewer = FromlistChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run)
