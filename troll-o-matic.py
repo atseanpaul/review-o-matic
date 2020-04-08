@@ -81,7 +81,8 @@ class Troll(object):
     return self.blacklist.get(change.number) == change.current_revision.number
 
   def process_change(self, project, rev, c):
-    logger.debug('Processing change {}'.format(c.url()))
+    if self.config.chatty:
+      logger.debug('Processing change {}'.format(c.url()))
 
     force_review = self.config.force_cl or self.config.force_all
 
@@ -105,7 +106,7 @@ class Troll(object):
     if not force_review and last_review:
       age_days = (datetime.datetime.utcnow() - last_review.date).days
 
-    if age_days != None:
+    if age_days != None and self.config.chatty:
       logger.debug('    Reviewed {} days ago'.format(age_days))
 
     # Find a reviewer and blacklist if not found
@@ -114,18 +115,22 @@ class Troll(object):
       # Some patches are blanket unreviewable, check these first
       reviewer = None
     elif FromlistChangeReviewer.can_review_change(project, c, age_days):
+      logger.debug('FromlistReviewer handling change {}'.format(c.url()))
       reviewer = FromlistChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run)
     elif FromgitChangeReviewer.can_review_change(project, c, age_days):
+      logger.debug('FromgitReviewer handling change {}'.format(c.url()))
       reviewer = FromgitChangeReviewer(project, rev, c,
                                        self.config.gerrit_msg_limit,
                                        self.config.dry_run, age_days)
     elif UpstreamChangeReviewer.can_review_change(project, c, age_days):
+      logger.debug('UpstreamReviewer handling change {}'.format(c.url()))
       reviewer = UpstreamChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run)
     elif ChromiumChangeReviewer.can_review_change(project, c, age_days):
+      logger.debug('ChromiumReviewer handling change {}'.format(c.url()))
       reviewer = ChromiumChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run,
@@ -150,7 +155,8 @@ class Troll(object):
           ignore = True
           break
       if ignore:
-        logger.debug('Ignoring change {}'.format(c))
+        if self.config.chatty:
+          logger.debug('Ignoring change {}'.format(c))
         self.add_change_to_blacklist(c)
         continue
 
@@ -184,10 +190,12 @@ class Troll(object):
           if (self.config.force_project and
               project.name != self.config.force_project):
             continue
-          logger.debug('Running for project {}'.format(project.name))
+          if self.config.chatty:
+            logger.debug('Running for project {}'.format(project.name))
           for p in project.prefixes:
             changes = self.get_changes(project, p)
-            logger.debug('{} changes for prefix {}'.format(len(changes), p))
+            if self.config.chatty:
+              logger.debug('{} changes for prefix {}'.format(len(changes), p))
             did_review += self.process_changes(project, changes)
 
         if did_review > 0:
@@ -197,7 +205,8 @@ class Troll(object):
 
         if not self.config.daemon:
           return
-        logger.debug('Finished! Going to sleep until next run')
+        if self.config.chatty:
+          logger.debug('Finished! Going to sleep until next run')
 
       except (requests.exceptions.HTTPError, OSError) as e:
         logger.error('Error getting changes: ({})'.format(str(e)))
