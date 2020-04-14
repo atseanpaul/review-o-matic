@@ -54,5 +54,5 @@ class UpstreamChangeReviewer(GitChangeReviewer):
   def get_upstream_patch(self):
     super().get_upstream_patch()
 
-    if not self.is_sha_in_mainline():
+    if self.upstream_ref and not self.is_sha_in_mainline():
       self.add_patch_not_in_mainline_review()
