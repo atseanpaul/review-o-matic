@@ -46,12 +46,12 @@ class KernelConfigChecker():
 
     shutil.rmtree(dir)
 
-  def checkout_commit(self, remote, ref, commit):
+  def fetch_commit(self, remote, ref, commit):
     retry = 4
     for i in range(0, retry):
       try:
-        self.reviewer.checkout(remote, ref, commit)
-        break
+        tmp_ref = self.reviewer.fetch_to_tmp_ref(remote, ref)
+        return tmp_ref
 
       except:
         if i == retry - 1:
@@ -93,17 +93,21 @@ class KernelConfigChecker():
 
     # Check out the tree just before the CL, and generate the full
     # kernel configs.
-    self.checkout_commit(remote, ref, 'FETCH_HEAD~1')
+    tmp_ref = self.fetch_commit(remote, ref)
+
+    self.reviewer.checkout('{}~1'.format(tmp_ref))
     self.create_kernel_configs()
     orig_dir = self.kernel_dir.joinpath('configs_orig')
     self.move_genconfigs(orig_dir)
 
     # Now check out the CL, and generate the full configs.
     self.reviewer.checkout_reset('chromeos/config')
-    self.checkout_commit(remote, ref, 'FETCH_HEAD')
+    self.reviewer.checkout(tmp_ref)
     self.create_kernel_configs()
     new_dir = self.kernel_dir.joinpath('configs_new')
     self.move_genconfigs(new_dir)
+
+    self.reviewer.delete_ref(tmp_ref)
 
     # Compare the two configs against each other.
     cmd = ['diff', '-ru0', 'configs_orig', 'configs_new']

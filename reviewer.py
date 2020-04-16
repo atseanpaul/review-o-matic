@@ -263,13 +263,8 @@ class Reviewer(object):
     if ret != 0:
       logger.error('Fetch remote ({}) failed: ({})'.format(str(ref), ret))
 
-  def checkout(self, remote, branch, commit='FETCH_HEAD'):
-    cmd = ['fetch', '--prune', remote, 'refs/heads/' + branch]
-    logger.debug("Running {}".format(" ".join(cmd)))
-
-    self.git(cmd, CallType.CALL)
-
-    cmd = ['checkout', commit]
+  def checkout(self, ref):
+    cmd = ['checkout', ref]
     logger.debug("Running {}".format(" ".join(cmd)))
 
     self.git(cmd, CallType.CALL)
@@ -322,10 +317,28 @@ class Reviewer(object):
     ret = self.git(cmd, CallType.CHECK_OUTPUT, stderr=None)
     return ret
 
-  def get_commit_from_remote(self, remote, ref):
-    cmd = ['fetch', '--prune', remote, ref]
+  def strip_special(self, string):
+    return re.sub('([a-z]*\://)|\W', '', string, flags=re.I)
+
+  def fetch_to_tmp_ref(self, remote, ref):
+    stripped = '{}_{}'.format(self.strip_special(remote),
+                              self.strip_special(ref))
+    tmp_ref = 'refs/branches/{}'.format(stripped)
+    cmd = ['fetch', '--prune', remote, '{}:{}'.format(ref, tmp_ref)]
     self.git(cmd, CallType.CHECK_CALL)
-    return self.get_commit_from_sha(CommitRef(sha='FETCH_HEAD'))
+    return tmp_ref
+
+  def delete_ref(self, ref):
+    cmd = ['update-ref', '-d', ref]
+    self.git(cmd, CallType.CHECK_CALL)
+
+  def get_commit_from_remote(self, remote, ref):
+    tmp_ref = self.fetch_to_tmp_ref(remote, ref)
+
+    ret = self.get_commit_from_sha(CommitRef(sha=tmp_ref))
+
+    self.delete_ref(tmp_ref)
+    return ret
 
   def compare_diffs(self, a, b, context=0):
     if context > self.MAX_CONTEXT:
