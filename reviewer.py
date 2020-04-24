@@ -175,7 +175,7 @@ class Reviewer(object):
               LineType.DELETED, LineType.ADDED, LineType.SIMILARITY,
               LineType.RENAME, LineType.EMPTY]
     include = [LineType.FILE_NEW, LineType.FILE_OLD, LineType.DIFF]
-    ctx_counter = 0
+    ctx_buffer = []
     for l in diff:
       if not l:
         continue
@@ -187,16 +187,19 @@ class Reviewer(object):
 
       if not l_type:
         logger.error('Could not classify line "{}"'.format(l))
-        ctx_counter = 0
+        ctx_buffer = []
         continue
 
       if l_type == LineType.CONTEXT:
-        if ctx_counter < context:
-          ret.append(l)
-        ctx_counter += 1
+        ctx_buffer.append(l)
         continue
 
-      ctx_counter = 0
+      # If we want to include context in the diffs, include the last N lines of
+      # context we've collected
+      if ctx_buffer and context:
+        ret.extend(ctx_buffer[-context:])
+
+      ctx_buffer = []
 
       if l_type in ignore:
         continue
