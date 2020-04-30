@@ -113,8 +113,6 @@ class GitChangeReviewer(ChangeReviewer):
     upstream_refs = CommitRef.refs_from_patch(self.gerrit_patch)
     if not upstream_refs:
       self.add_missing_hash_review()
-      # TODO: Remove me when Issue #19 is fixed
-      logger.error('Adding missing hash review for change {}, patch="{}"'.format(self.change, self.gerrit_patch))
       return
 
     for r in reversed(upstream_refs):
