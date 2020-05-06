@@ -98,7 +98,8 @@ class Troll(object):
         retry_request = m
 
     # Received a retry request
-    if retry_request and retry_request.date > last_review.date:
+    if (retry_request and
+        (not last_review or retry_request.date > last_review.date)):
       logger.error('Received retry request on change {}'.format(c.url()))
       force_review = True
 
