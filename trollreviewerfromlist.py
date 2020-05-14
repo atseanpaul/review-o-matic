@@ -36,7 +36,7 @@ class FromlistChangeReviewer(ChangeReviewer):
     super().__init__(project, reviewer, change, msg_limit, dry_run)
     self.strings = FromlistReviewStrings()
     self.review_result = ReviewResult(self.change, self.strings, self.dry_run)
-    self.review_backports = False
+    self.review_backports = True
     self.patchwork_patch = None
     self.patchwork_comments = None
 
