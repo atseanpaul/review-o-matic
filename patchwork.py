@@ -131,7 +131,7 @@ class PatchworkPatch(object):
   def __init__(self, whitelist, url):
     parsed = urllib.parse.urlparse(url)
 
-    m = re.match('/([a-z/]*)/([0-9]*)/?', parsed.path)
+    m = re.match('/(.*?)/patch/([^/]*)/?', parsed.path)
     if not m or not m.group(2):
       logger.error('Malformed patchwork URL "%s"'.format(url))
       raise ValueError('Invalid url')
@@ -148,7 +148,7 @@ class PatchworkPatch(object):
       raise ValueError('Invalid host')
 
     self.url = parsed
-    self.id = int(m.group(2))
+    self.id = m.group(2)
     self.patch = None
     self.comments = []
 
@@ -174,6 +174,8 @@ class PatchworkPatch(object):
                                      'api/patches/{}/comments/'.format(self.id))
     comments_url = self.url._replace(path=str(comments_path))
     resp = requests.get(comments_url.geturl())
+    if resp.status_code != 200:
+        return None
 
     rest = resp.json()
     for c in rest:
