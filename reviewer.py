@@ -64,6 +64,9 @@ class CommitRef(object):
 
   @staticmethod
   def refs_from_patch(patch):
+    # Helper pattern to match any character that isn't whitespace or )
+    non_ws = '[^\)^\s]'
+
     # This has pattern has gotten a bit hard to parse, so i'll do my best.
 
     # Start with an opening paren and allow for whitespace
@@ -92,7 +95,7 @@ class CommitRef(object):
     # This will match the remote url. It's pretty simple, just matches any
     # protocol (git://, http://, https://, madeup://) and then match all
     # non-whitespace characters, this is our remote.
-    pattern += '([a-z]*\://\S*)'
+    pattern += '([a-z]*\://{nws}*)'.format(nws=non_ws)
 
     # Now that we have the URL, eat any whitespace again
     pattern += '\s*'
@@ -100,13 +103,13 @@ class CommitRef(object):
     # The next run of non-whitespace characters could either be 'tag' or the
     # remote branch. Make it optional in case they want to use the default
     # remote branch
-    pattern += '(\S*)?'
+    pattern += '({nws}*)?'.format(nws=non_ws)
 
     # Eat more whitespace, yum!
     pattern += '\s*'
 
     # Finally, if this is a tag, parse the tag name
-    pattern += '(\S*)?'
+    pattern += '({nws}*)?'.format(nws=non_ws)
 
     # Close the optional paren around remote/branch
     pattern += ')?'
