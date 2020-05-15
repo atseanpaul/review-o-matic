@@ -131,7 +131,7 @@ class PatchworkPatch(object):
   def __init__(self, whitelist, url):
     parsed = urllib.parse.urlparse(url)
 
-    m = re.match('/(.*?)/patch/([^/]*)/?', parsed.path)
+    m = re.match('(.*?)/patch/([^/]*)/?', parsed.path)
     if not m or not m.group(2):
       logger.error('Malformed patchwork URL "%s"'.format(url))
       raise ValueError('Invalid url')
