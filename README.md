@@ -52,8 +52,8 @@ This script monitors a set of patches on gerrit, flipping the CodeReview/Verify/
 
 #### Usage
 ```
-usage: submit-o-matic.py [-h] --last_cid LAST_CID [--daemon] [--no-review]
-                         [--no-verify] [--no-ready]
+usage: submit-o-matic.py [-h] --last_cid LAST_CID [--daemon] [--review]
+                         [--verify] [--ready] [--dry-run]
 
 Auto review/submit gerrit cls
 
@@ -62,15 +62,16 @@ optional arguments:
   --last_cid LAST_CID  Gerrit change-id of last patch in set
   --daemon             Run in daemon mode, continuously update changes until
                        merged
-  --no-review          Don't mark changes as reviewed
-  --no-verify          Don't mark changes as verified
-  --no-ready           Don't mark changes as ready
+  --review             Mark changes as reviewed
+  --verify             Mark changes as verified
+  --ready              Mark changes as ready
+  --dry-run	       Practice makes perfect
 ```
 
 #### Example Invocations
 Flip the Verify and CQReady bits on the entire gerrit series ending in change 1439600. Continue to flip those bits until it has been marked as merged.
 ```
-submit-o-matic.py --last_cid 1439600 --daemon --no-review
+submit-o-matic.py --last_cid 1439600 --daemon --verify --ready
 ```
 
 
