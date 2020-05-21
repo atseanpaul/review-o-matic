@@ -24,7 +24,7 @@ class Submitter(object):
 
     self.changes = []
     self.gerrit = Gerrit('https://chromium-review.googlesource.com',
-                         use_internal=True)
+                         use_internal=False)
     last_change = self.gerrit.get_change(last_cid)
     self.changes = self.gerrit.get_related_changes(last_change)
     if not self.changes:
