@@ -199,7 +199,7 @@ class Gerrit(object):
     try:
       self.rest.post(uri, data=options, timeout=self.timeout)
       return True
-    except requests.exceptions.HTTPError as e:
+    except requests.exceptions.HTTPError:
       return False
 
   def review(self, change, tag, message, notify_owner, vote_code_review=None,

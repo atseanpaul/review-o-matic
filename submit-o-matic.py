@@ -9,7 +9,7 @@ import time
 
 from gerrit import Gerrit
 
-logger = logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 class Submitter(object):
   def __init__(self, last_cid, review, verify, ready):
