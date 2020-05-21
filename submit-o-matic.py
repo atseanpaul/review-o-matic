@@ -47,7 +47,7 @@ class Submitter(object):
   def review_changes(self):
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
-      c = self.gerrit.get_change(c.change_id)
+      c = self.gerrit.get_change(c.id)
       if c.is_merged() or not self.change_needs_action(c):
         continue
 
@@ -62,7 +62,7 @@ class Submitter(object):
         break
 
       sys.stdout.write('\rRunning submitter (%d/%d)' % (i, self.num_changes()))
-      c = self.gerrit.get_change(c.change_id)
+      c = self.gerrit.get_change(c.id)
       if c.is_merged():
         merged += 1
         continue
@@ -84,7 +84,7 @@ class Submitter(object):
 
     c = self.in_flight[0]
     sys.stdout.write('\rDetecting: %s' % c.url())
-    c = self.gerrit.get_change(c.change_id)
+    c = self.gerrit.get_change(c.id)
     if self.change_needs_action(c):
       return True
 
