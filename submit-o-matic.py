@@ -45,6 +45,9 @@ class Submitter(object):
     return len(self.in_flight)
 
   def review_changes(self):
+    if not self.vote_review and not self.vote_verify:
+      return
+
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
       c = self.gerrit.get_change(c.id)
