@@ -211,6 +211,9 @@ class Reviewer(object):
       else:
         logger.error('line_type not handled {}: {}'.format(l_type, l))
 
+    if ctx_buffer and context:
+      ret.extend(ctx_buffer[-context:])
+
     return ret
 
   def git(self, cmd, call_type, stdout=subprocess.DEVNULL,
