@@ -1,7 +1,11 @@
 from trollreview import ReviewType
 
+import logging
 import random
 import re
+
+logger = logging.getLogger('rom')
+logger.setLevel(logging.DEBUG) # leave this to handlers
 
 class ChangeReviewer(object):
   def __init__(self, project, reviewer, change, msg_limit, dry_run):
@@ -131,6 +135,8 @@ class ChangeReviewer(object):
       self.compare_patches_clean()
 
   def review_patch(self):
+    logger.debug('{} handling change {}'.format(type(self).__name__,
+                                                self.change.url()))
     self.get_patches()
     self.validate_commit_message()
     if self.gerrit_patch and self.upstream_patch:

@@ -116,22 +116,18 @@ class Troll(object):
       # Some patches are blanket unreviewable, check these first
       reviewer = None
     elif FromlistChangeReviewer.can_review_change(project, c, age_days):
-      logger.debug('FromlistReviewer handling change {}'.format(c.url()))
       reviewer = FromlistChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run)
     elif FromgitChangeReviewer.can_review_change(project, c, age_days):
-      logger.debug('FromgitReviewer handling change {}'.format(c.url()))
       reviewer = FromgitChangeReviewer(project, rev, c,
                                        self.config.gerrit_msg_limit,
                                        self.config.dry_run, age_days)
     elif UpstreamChangeReviewer.can_review_change(project, c, age_days):
-      logger.debug('UpstreamReviewer handling change {}'.format(c.url()))
       reviewer = UpstreamChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run)
     elif ChromiumChangeReviewer.can_review_change(project, c, age_days):
-      logger.debug('ChromiumReviewer handling change {}'.format(c.url()))
       reviewer = ChromiumChangeReviewer(project, rev, c,
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run,
