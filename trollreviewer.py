@@ -24,7 +24,10 @@ class ChangeReviewer(object):
   @staticmethod
   def can_review_change(project, change, days_since_last_review):
     # Don't review these patches (yet)
-    if 'FIXUP' in change.subject or change.subject.startswith('Revert '):
+    if ('FIXUP' in change.subject or
+        change.subject.startswith('Revert ') or
+        change.subject.startswith('PRE-UPSTREAM') or
+        change.subject.startswith('WIP')):
       return False
     return True
 
