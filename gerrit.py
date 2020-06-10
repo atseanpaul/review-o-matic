@@ -153,7 +153,7 @@ class Gerrit(object):
     uri = '/changes/{}/revisions/current/related'.format(change.id)
     changes = []
     for c in self.rest.get(uri, timeout=self.timeout)['changes']:
-      changes.append(self.get_change(c['change_id']))
+      changes.append(self.get_change(c['_change_number']))
     return changes
 
   def query_changes(self, status=None, message=None, after=None, age_days=None,

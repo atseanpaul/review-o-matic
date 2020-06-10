@@ -52,7 +52,7 @@ class Submitter(object):
 
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
-      c = self.gerrit.get_change(c.id)
+      c = self.gerrit.get_change(c.number)
       if c.is_merged() or not self.change_needs_action(c):
         continue
 
