@@ -52,11 +52,11 @@ class FromgitChangeReviewer(GitChangeReviewer):
                                   self.strings.PATCH_IN_MAINLINE, vote=-1,
                                   notify=True)
 
-  def is_remote_in_blacklist(self):
+  def is_remote_in_blocked_repos(self):
     if not self.upstream_ref:
       return False
 
-    for b in self.project.blacklist:
+    for b in self.project.blocked_repos:
       if re.match(b, self.upstream_ref.remote, re.I):
         return True
     return False
@@ -71,7 +71,7 @@ class FromgitChangeReviewer(GitChangeReviewer):
 
     if self.is_sha_in_mainline():
       self.add_patch_in_mainline_review()
-    elif self.is_remote_in_blacklist():
+    elif self.is_remote_in_blocked_repos():
       self.add_patch_in_forbidden_tree()
 
   def review_patch(self):

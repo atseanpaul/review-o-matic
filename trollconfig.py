@@ -17,7 +17,7 @@ TrollConfigProject = collections.namedtuple('TrollConfigProject',
                                               'review_kconfig',
                                               'prefixes',
                                               'patchworks',
-                                              'blacklist',
+                                              'blocked_repos',
                                               'ignore_branches',
                                               'ignore_sob',
                                             ])
@@ -68,11 +68,11 @@ class TrollConfig(object):
         continue
       patchworks.append(self.build_patchwork('patchwork_{}'.format(p)))
 
-    blacklist = []
-    for b in self.config.get(sec, 'BlacklistedRepos', fallback='').split(','):
+    blocked_repos = []
+    for b in self.config.get(sec, 'BlockedRepos', fallback='').split(','):
       if not b:
         continue
-      blacklist.append(self.config.get('blacklist_{}'.format(b), 'Regex'))
+      blocked_repos.append(self.config.get('blockedrepo_{}'.format(b), 'Regex'))
 
     ignore_branches = []
     for b in self.config.get(sec, 'IgnoreBranches', fallback='').split(','):
@@ -89,7 +89,8 @@ class TrollConfig(object):
                               self.config.get(sec, 'GerritRemoteName'),
                               self.config.getboolean(sec, 'ReviewKconfig',
                                                      fallback=False),
-                              prefixes, patchworks, blacklist, ignore_branches,
+                              prefixes, patchworks, blocked_repos,
+                              ignore_branches,
                               self.config.getboolean(sec, 'IgnoreSignedOffBy',
                                                      fallback=False))
 
