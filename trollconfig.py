@@ -18,6 +18,7 @@ TrollConfigProject = collections.namedtuple('TrollConfigProject',
                                               'prefixes',
                                               'patchworks',
                                               'blocked_repos',
+                                              'monitor_branches',
                                               'ignore_branches',
                                               'ignore_sob',
                                             ])
@@ -74,6 +75,12 @@ class TrollConfig(object):
         continue
       blocked_repos.append(self.config.get('blockedrepo_{}'.format(b), 'Regex'))
 
+    monitor_branches = []
+    for b in self.config.get(sec, 'MonitorBranches', fallback='').split(','):
+        if not b:
+            continue
+        monitor_branches.append(b)
+
     ignore_branches = []
     for b in self.config.get(sec, 'IgnoreBranches', fallback='').split(','):
       if not b:
@@ -90,7 +97,7 @@ class TrollConfig(object):
                               self.config.getboolean(sec, 'ReviewKconfig',
                                                      fallback=False),
                               prefixes, patchworks, blocked_repos,
-                              ignore_branches,
+                              monitor_branches, ignore_branches,
                               self.config.getboolean(sec, 'IgnoreSignedOffBy',
                                                      fallback=False))
 

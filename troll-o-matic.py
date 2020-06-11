@@ -71,7 +71,8 @@ class Troll(object):
     message = '{}:'.format(prefix)
     after = datetime.date.today() - datetime.timedelta(days=5)
     changes = self.gerrit.query_changes(status='open', message=message,
-                    after=after, project=project.gerrit_project)
+                    after=after, project=project.gerrit_project,
+                    branches=project.monitor_branches)
     return changes
 
   def add_change_to_ignore_list(self, change):
