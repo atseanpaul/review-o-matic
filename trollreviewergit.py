@@ -61,6 +61,10 @@ class GitChangeReviewer(ChangeReviewer):
       l += 'w1.fi'
       l += '/cgit/{}'.format(tree.group(1))
       l += self.get_cgit_web_link_path()
+    elif 'gitlab' in parsed.netloc:
+      l += parsed.netloc
+      l += parsed.path.replace('.git', '')
+      l += '/-/commit/{}'.format(self.upstream_ref.sha)
     else:
       logger.warning('Could not parse web link for {}'.format(remote))
       return
