@@ -129,6 +129,17 @@ class PatchworkSeries(object):
 
 class PatchworkPatch(object):
   def __init__(self, whitelist, url):
+    self.whitelist = whitelist
+    self.parse_url(url)
+
+    # Handle redirects and update the url member with the result. This allows
+    # for better handling of msgid-based urls
+    resp = requests.get(self.url.geturl())
+    resp.raise_for_status()
+    if resp.history:
+      self.parse_url(resp.url)
+
+  def parse_url(self, url):
     parsed = urllib.parse.urlparse(url)
 
     m = re.match('(.*?)/patch/([^/]*)/?', parsed.path)
@@ -137,7 +148,7 @@ class PatchworkPatch(object):
       raise ValueError('Invalid url')
 
     found = False
-    for i in whitelist:
+    for i in self.whitelist:
       if parsed.netloc == i.host:
         self.path_prefix = i.path
         self.comments_supported = i.has_comments
@@ -163,7 +174,9 @@ class PatchworkPatch(object):
     if not self.patch:
       raw_path = pathlib.PurePath(self.url.path, 'raw')
       raw_url = self.url._replace(path=str(raw_path))
-      self.patch = requests.get(raw_url.geturl()).text
+      resp = requests.get(raw_url.geturl())
+      resp.raise_for_status()
+      self.patch = resp.text
     return self.patch
 
   def get_comments(self):
