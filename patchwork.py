@@ -128,8 +128,8 @@ class PatchworkSeries(object):
 
 
 class PatchworkPatch(object):
-  def __init__(self, whitelist, url):
-    self.whitelist = whitelist
+  def __init__(self, allowlist, url):
+    self.allowlist = allowlist
     self.parse_url(url)
 
     # Handle redirects and update the url member with the result. This allows
@@ -148,14 +148,14 @@ class PatchworkPatch(object):
       raise ValueError('Invalid url')
 
     found = False
-    for i in self.whitelist:
+    for i in self.allowlist:
       if parsed.netloc == i.host:
         self.path_prefix = i.path
         self.comments_supported = i.has_comments
         found = True
         break
     if not found:
-      logger.error('Patchwork host not whitelisted "%s"'.format(url))
+      logger.error('Patchwork host not allowed "%s"'.format(url))
       raise ValueError('Invalid host')
 
     self.url = parsed

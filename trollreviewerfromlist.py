@@ -99,7 +99,7 @@ class FromlistChangeReviewer(ChangeReviewer):
 
     if not self.upstream_patch:
       logger.warning('patch missing from patchwork, or patchwork host not '
-                     'whitelisted for {} ({})'.format(self.change,
+                     'allowed for {} ({})'.format(self.change,
                      patchwork_url))
       return
 

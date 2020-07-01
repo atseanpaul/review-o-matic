@@ -134,7 +134,7 @@ review-o-matic.py --start "$( git log --pretty=format:%H cros/chromeos-4.19.. | 
 ## relate-o-matic
 Given a commit hash, this script will find other patches in the same series.
 
-This requires that the given commit has a Link: tag in the commit message pointing to a whitelisted patchwork location.
+This requires that the given commit has a Link: tag in the commit message pointing to a allowed patchwork location.
 
 #### Usage
 ```
