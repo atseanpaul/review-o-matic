@@ -149,11 +149,29 @@ class Gerrit(object):
 
     return c
 
-  def get_related_changes(self, change):
+  def get_ancestor_changes(self, change):
     uri = '/changes/{}/revisions/current/related'.format(change.id)
+    related_changes = self.rest.get(uri, timeout=self.timeout)['changes']
     changes = []
-    for c in self.rest.get(uri, timeout=self.timeout)['changes']:
-      changes.append(self.get_change(c['_change_number']))
+
+    for c in related_changes:
+      if c['change_id'] == change.change_id:
+        parents = c['commit']['parents']
+        break
+
+    while True:
+      new_parents = []
+      for p in parents:
+        for c in related_changes:
+          if c['commit']['commit'] == p['commit']:
+            new_parents += c['commit']['parents']
+            changes.append(self.get_change(c['_change_number']))
+            break
+      if new_parents:
+        parents = new_parents
+      else:
+        break
+
     return changes
 
   def query_changes(self, status=None, message=None, after=None, age_days=None,

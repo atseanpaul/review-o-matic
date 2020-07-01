@@ -28,11 +28,11 @@ class Submitter(object):
     self.gerrit = Gerrit('https://chromium-review.googlesource.com',
                          use_internal=False)
     last_change = self.gerrit.get_change(last_cid)
-    related_changes = self.gerrit.get_related_changes(last_change)
-    if not related_changes:
+    ancestor_changes = self.gerrit.get_ancestor_changes(last_change)
+    if not ancestor_changes:
       self.changes = [last_change]
     else:
-      for c in reversed(related_changes):
+      for c in ancestor_changes:
         if c.status == 'NEW':
           self.changes.append(c)
 
