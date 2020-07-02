@@ -29,10 +29,8 @@ class Submitter(object):
                          use_internal=False)
     last_change = self.gerrit.get_change(last_cid)
     ancestor_changes = self.gerrit.get_ancestor_changes(last_change)
-    if not ancestor_changes:
-      self.changes = [last_change]
-    else:
-      for c in ancestor_changes:
+    self.changes = [last_change]
+    for c in reversed(ancestor_changes):
         if c.status == 'NEW':
           self.changes.append(c)
 

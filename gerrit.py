@@ -153,6 +153,7 @@ class Gerrit(object):
     uri = '/changes/{}/revisions/current/related'.format(change.id)
     related_changes = self.rest.get(uri, timeout=self.timeout)['changes']
     changes = []
+    parents = []
 
     for c in related_changes:
       if c['change_id'] == change.change_id:
