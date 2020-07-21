@@ -27,6 +27,7 @@ class ChangeReviewer(object):
     if ('FIXUP' in change.subject or
         change.subject.startswith('Revert ') or
         change.subject.startswith('PRE-UPSTREAM') or
+        change.subject.startswith('TO-UPSTREAM') or
         change.subject.startswith('WIP')):
       return False
     return True
