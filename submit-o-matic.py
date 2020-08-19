@@ -125,6 +125,7 @@ def main():
   parser.add_argument('--tryjob', action='store_true',
     help='Mark changes as ready +1 (tryjob)')
   parser.add_argument('--dry-run', action='store_true', help='Practice makes perfect')
+  parser.add_argument('--max-tries', default=5, help='Max number to try submit in daemon mode', type=int)
   args = parser.parse_args()
 
   ready = None
@@ -135,6 +136,7 @@ def main():
 
   s = Submitter(args.last_cid, args.review, args.verify, ready, args.force_review, args.dry_run)
   s.review_changes()
+  tries = 0
   while True:
     s.submit_changes()
     if s.num_in_flight() == 0:
@@ -143,6 +145,11 @@ def main():
 
     if not args.daemon:
       break
+
+    if tries >= args.max_tries:
+      sys.stdout.write('\n\nMax tries exceeded!\n\n')
+      return False
+    tries += 1
 
     while True:
       sys.stdout.write('\rSleeping...                                        ')
