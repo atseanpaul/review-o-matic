@@ -144,7 +144,7 @@ class PatchworkPatch(object):
 
     m = re.match('(.*?)/patch/([^/]*)/?', parsed.path)
     if not m or not m.group(2):
-      logger.error('Malformed patchwork URL "%s"'.format(url))
+      logger.error('Malformed patchwork URL "{}"'.format(url))
       raise ValueError('Invalid url')
 
     found = False
@@ -155,7 +155,7 @@ class PatchworkPatch(object):
         found = True
         break
     if not found:
-      logger.error('Patchwork host not allowed "%s"'.format(url))
+      logger.error('Patchwork host not allowed "{}"'.format(url))
       raise ValueError('Invalid host')
 
     self.url = parsed
