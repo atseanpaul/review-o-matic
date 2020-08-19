@@ -110,7 +110,7 @@ class Submitter(object):
 
 def main():
   parser = argparse.ArgumentParser(description='Auto review/submit gerrit cls')
-  parser.add_argument('--last_cid', default=None, required=True,
+  parser.add_argument('--last-cid', default=None, required=True,
     help='Gerrit change-id of last patch in set')
   parser.add_argument('--daemon', action='store_true',
     help='Run in daemon mode, continuously update changes until merged')
