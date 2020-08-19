@@ -140,7 +140,7 @@ class PatchworkPatch(object):
       self.parse_url(resp.url)
 
   def parse_url(self, url):
-    parsed = urllib.parse.urlparse(url)
+    parsed = urllib.parse.urlparse(url.strip())
 
     m = re.match('(.*?)/patch/([^/]*)/?', parsed.path)
     if not m or not m.group(2):
