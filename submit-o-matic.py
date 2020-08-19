@@ -30,10 +30,10 @@ class Submitter(object):
                          use_internal=False)
     last_change = self.gerrit.get_change(last_cid)
     ancestor_changes = self.gerrit.get_ancestor_changes(last_change)
-    self.changes = [last_change]
     for c in reversed(ancestor_changes):
         if c.status == 'NEW':
           self.changes.append(c)
+    self.changes.append(last_change)
 
   def change_needs_action(self, change):
     return change.is_merged() or \
