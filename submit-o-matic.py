@@ -12,10 +12,11 @@ from gerrit import Gerrit
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 class Submitter(object):
-  def __init__(self, last_cid, review, verify, ready, dry_run):
+  def __init__(self, last_cid, review, verify, ready, force_review, dry_run):
     self.vote_review = 2 if review else None
     self.vote_verify = 1 if verify else None
     self.vote_cq_ready = ready
+    self.force_review = force_review
 
     self.dry_run = dry_run
 
@@ -53,7 +54,7 @@ class Submitter(object):
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
       c = self.gerrit.get_change(c.number)
-      if c.is_merged() or not self.change_needs_action(c):
+      if (c.is_merged() or not self.change_needs_action(c)) and not self.force_review:
         continue
 
       if not self.dry_run:
@@ -119,6 +120,8 @@ def main():
     help='Mark changes as verified')
   parser.add_argument('--ready', action='store_true',
     help='Mark changes as ready')
+  parser.add_argument('--force-review', action='store_true',
+    help='Force reviewer to act on all patches in the series')
   parser.add_argument('--tryjob', action='store_true',
     help='Mark changes as ready +1 (tryjob)')
   parser.add_argument('--dry-run', action='store_true', help='Practice makes perfect')
@@ -130,7 +133,7 @@ def main():
   elif args.tryjob:
     ready = 1
 
-  s = Submitter(args.last_cid, args.review, args.verify, args.ready, args.dry_run)
+  s = Submitter(args.last_cid, args.review, args.verify, ready, args.force_review, args.dry_run)
   s.review_changes()
   while True:
     s.submit_changes()
