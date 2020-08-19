@@ -15,7 +15,7 @@ class Submitter(object):
   def __init__(self, last_cid, review, verify, ready, dry_run):
     self.vote_review = 2 if review else None
     self.vote_verify = 1 if verify else None
-    self.vote_cq_ready = 2 if ready else None
+    self.vote_cq_ready = ready
 
     self.dry_run = dry_run
 
@@ -119,8 +119,16 @@ def main():
     help='Mark changes as verified')
   parser.add_argument('--ready', action='store_true',
     help='Mark changes as ready')
+  parser.add_argument('--tryjob', action='store_true',
+    help='Mark changes as ready +1 (tryjob)')
   parser.add_argument('--dry-run', action='store_true', help='Practice makes perfect')
   args = parser.parse_args()
+
+  ready = None
+  if args.ready:
+    ready = 2
+  elif args.tryjob:
+    ready = 1
 
   s = Submitter(args.last_cid, args.review, args.verify, args.ready, args.dry_run)
   s.review_changes()
