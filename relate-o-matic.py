@@ -2,11 +2,14 @@
 
 from patchwork import PatchworkPatch
 from reviewer import Reviewer
+from trollconfig import TrollConfigPatchwork
 
 import argparse
 import logging
 from logging import handlers
+import re
 import sys
+import urllib
 
 logger = logging.getLogger('rom')
 logger.setLevel(logging.DEBUG) # leave this to handlers
@@ -37,7 +40,16 @@ def main():
 
   series = None
   for l in reversed(links):
-    p = PatchworkPatch(l)
+    logger.debug('Trying patchwork link {}'.format(l))
+    parsed = urllib.parse.urlparse(l)
+
+    m = re.match('(.*?)/patch/([^/]*)/?', parsed.path)
+    if not m:
+      continue
+    pw = TrollConfigPatchwork('generated', parsed.netloc, m.group(1), False)
+
+    logger.debug('Trying parsed patchwork link {}'.format(pw))
+    p = PatchworkPatch([pw], l)
     series = p.get_series()
     if series:
       break
