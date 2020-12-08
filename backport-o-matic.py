@@ -173,8 +173,12 @@ def find_line(msg, criteria):
       return (i, m)
   return (None, None)
 
-# Removes the line and a trailing blank (if exists)
+# Removes the line and leading/trailing blank (if exists)
 def remove_line(msg, idx):
+  if idx > 0 and msg[idx - 1].type == LineType.BLANK:
+    idx -= 1
+    del msg[idx]
+
   del msg[idx]
   if len(msg) > idx and msg[idx].type == LineType.BLANK:
     del msg[idx]
