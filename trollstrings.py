@@ -117,7 +117,7 @@ This is expected, and this message is posted to make reviewing backports easier.
 '''
   FOOTER='''
 To learn more about backporting patches to Chromium OS, check out:
-https://chromium.googlesource.com/chromiumos/docs/+/master/kernel_faq.md#UPSTREAM_BACKPORT_FROMLIST_and-you
+https://chromium.googlesource.com/chromiumos/docs/+/HEAD/kernel_development.md#upstream_backport_fromlist_and-you
 
 If you're curious about how this message was generated, head over to:
 https://github.com/atseanpaul/review-o-matic
