@@ -91,13 +91,17 @@ class GerritChange(object):
     return '"{}" ({})'.format(self.subject, self.url())
 
   def __parse_votes(self, rest, array, label):
+    if not rest.get('labels') or not rest['labels'].get(label):
+      return False
+
     values = rest['labels'][label].get('all')
     if not values:
-      return
+      return True
     for l in values:
       value = l.get('value')
       if value:
         array.append(value)
+    return True
 
   def url(self):
     return '{}/c/{}/+/{}/{}'.format(self.base_url, self.project, self.number,
