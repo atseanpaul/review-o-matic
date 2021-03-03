@@ -64,7 +64,7 @@ def main():
     logger.info(' Find commits for: {}'.format(p))
     commit = reviewer.get_commit_from_subject(p, surrounding_commit=args.commit)
     if not commit:
-      logger.warn('Could not find commit for {}'.format(p))
+      logger.warning('Could not find commit for {}'.format(p))
     for c in commit:
       logger.info('   Found: {}'.format(c))
   
