@@ -90,13 +90,18 @@ class Troll(object):
     last_review = None
     retry_request = None
     # Look for prior reviews and retry requests
-    for m in sorted(c.messages, key=lambda msg: msg.date):
+    for m in c.get_messages():
       if not m.revision_num == c.current_revision.number:
         continue
       if m.tag == self.tag:
         last_review = m
       elif self.RETRY_REVIEW_KEY in m.message:
         retry_request = m
+      else:
+        for comment in m.comments:
+          if self.RETRY_REVIEW_KEY in comment.message:
+            retry_request = m
+            break
 
     # Received a retry request
     if (retry_request and

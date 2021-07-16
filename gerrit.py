@@ -1,9 +1,14 @@
 from datetime import datetime
 import json
+import logging
+from logging import handlers
 from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
 import pprint
 import requests
 import urllib
+
+logger = logging.getLogger('rom')
+logger.setLevel(logging.DEBUG) # leave this to handlers
 
 def parse_gerrit_timestamp(ts):
   return datetime.strptime(ts[:-10], '%Y-%m-%d %H:%M:%S')
@@ -26,6 +31,20 @@ class GerritMessage(object):
     self.tag = rest.get('tag')
     self.message = rest['message']
     self.date = parse_gerrit_timestamp(rest['date'])
+    self.comments = []
+
+class GerritComment(object):
+  def __init__(self, path, rest):
+    # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-message-info
+    self.path = path
+    self.id = rest['id']
+    self.message_id = rest['change_message_id']
+    if rest.get('line'):
+      self.line = rest['line']
+    else:
+      self.line = 0
+    self.author = rest['author']['name']
+    self.message = rest['message']
 
 class GerritRevision(object):
   def __init__(self, id, rest):
@@ -68,9 +87,10 @@ class GerritChange(object):
     for r in rest['revisions']:
       self.revisions.append(GerritRevision(r, rest['revisions'][r]))
 
-    self.messages = []
+    self.messages = {}
     for m in rest['messages']:
-      self.messages.append(GerritMessage(m))
+      msg = GerritMessage(m)
+      self.messages[msg.id] = msg
 
     self.vote_code_review = []
     self.__parse_votes(rest, self.vote_code_review, 'Code-Review')
@@ -107,6 +127,9 @@ class GerritChange(object):
     return '{}/c/{}/+/{}/{}'.format(self.base_url, self.project, self.number,
                                     self.current_revision.number)
 
+  def get_messages(self):
+    return sorted(self.messages.values(), key=lambda msg: msg.date)
+
   def is_merged(self):
     return self.status == 'MERGED'
 
@@ -118,6 +141,17 @@ class GerritChange(object):
 
   def is_cq_ready(self):
     return 1 in self.vote_commit_queue or 2 in self.vote_commit_queue
+
+  def add_comments(self, rest):
+    for (path, comments) in rest.items():
+      for c in comments:
+        cmt = GerritComment(path, c)
+        if self.messages.get(cmt.message_id):
+          self.messages[cmt.message_id].comments.append(cmt)
+        else:
+          logger.error('Could not find message id {} on change {}'.format(cmt.message_id, self.url()))
+
+    return
 
 class Gerrit(object):
   def __init__(self, url, use_internal=False):
@@ -150,6 +184,11 @@ class Gerrit(object):
         r.commit_message = rest['message']
         c.subject = rest['subject']
         c.current_revision = r
+
+    uri = '/changes/{}/comments/'.format(change_id)
+    rest = self.rest.get(uri, timeout=self.timeout)
+    #pprint.PrettyPrinter(indent=4).pprint(rest)
+    c.add_comments(rest)
 
     return c
 
