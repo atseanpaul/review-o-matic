@@ -12,7 +12,9 @@ from gerrit import Gerrit
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 class Submitter(object):
-  def __init__(self, last_cid, review, verify, ready, force_review, dry_run):
+  def __init__(self, last_cid, review, verify, ready, abandon, force_review,
+               dry_run):
+    self.abandon = abandon
     self.vote_review = 2 if review else None
     self.vote_verify = 1 if verify else None
     self.vote_cq_ready = ready
@@ -48,12 +50,20 @@ class Submitter(object):
     return len(self.in_flight)
 
   def review_changes(self):
-    if not self.vote_review and not self.vote_verify:
+    if not self.vote_review and not self.vote_verify and not self.abandon:
       return
 
     for i,c in enumerate(self.changes):
       sys.stdout.write('\rRunning reviewer (%d/%d)' % (i, self.num_changes()))
       c = self.gerrit.get_change(c.number)
+
+      if self.abandon:
+        if not self.dry_run:
+          self.gerrit.abandon(c)
+        else:
+          print('DRYRUN abandon {}'.format(c))
+        continue
+
       if (c.is_merged() or not self.change_needs_action(c)) and not self.force_review:
         continue
 
@@ -66,6 +76,9 @@ class Submitter(object):
                                                      c))
 
   def submit_changes(self):
+    if self.abandon:
+      return
+
     self.in_flight = []
     merged = 0
     for i,c in enumerate(self.changes):
@@ -124,6 +137,7 @@ def main():
     help='Force reviewer to act on all patches in the series')
   parser.add_argument('--tryjob', action='store_true',
     help='Mark changes as ready +1 (tryjob)')
+  parser.add_argument('--abandon', action='store_true', help='Abandon changes')
   parser.add_argument('--dry-run', action='store_true', help='Practice makes perfect')
   parser.add_argument('--max-tries', default=5, help='Max number to try submit in daemon mode', type=int)
   args = parser.parse_args()
@@ -134,7 +148,8 @@ def main():
   elif args.tryjob:
     ready = 1
 
-  s = Submitter(args.last_cid, args.review, args.verify, ready, args.force_review, args.dry_run)
+  s = Submitter(args.last_cid, args.review, args.verify, ready, args.abandon,
+                args.force_review, args.dry_run)
   s.review_changes()
   tries = 0
   while True:

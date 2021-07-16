@@ -235,6 +235,14 @@ class Gerrit(object):
     except requests.exceptions.HTTPError:
       return False
 
+  def abandon(self, change):
+    uri = '/changes/{}/abandon'.format(change.id)
+    try:
+      self.rest.post(uri, timeout=self.timeout)
+      return True
+    except requests.exceptions.HTTPError:
+      return False
+
   def review(self, change, tag, message, notify_owner, vote_code_review=None,
              vote_verified=None, vote_cq_ready=None, inline_comments=None):
     review = {
