@@ -8,7 +8,8 @@ import sys
 
 from reviewer import Reviewer
 
-logger = logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 def review_change(reviewer, local_sha):
   upstream_sha = reviewer.get_cherry_pick_sha_from_local_sha(local_sha)
