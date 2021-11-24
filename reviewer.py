@@ -293,7 +293,7 @@ class Reviewer(object):
 
     # Use the last SHA found in the patch, since it's (probably) most recent,
     # and only return the SHA, not the remote/branch
-    return CommitRef.refs_from_patch(commit_message)[-1]['sha']
+    return CommitRef.refs_from_patch(commit_message)[-1].sha
 
   def get_links_from_local_sha(self, local_sha):
     commit_message = self.get_commit_msg_from_sha(local_sha)
