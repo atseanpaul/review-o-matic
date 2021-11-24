@@ -6,19 +6,21 @@ import re
 import subprocess
 import sys
 
+from reviewer import CommitRef
 from reviewer import Reviewer
 
 logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def review_change(reviewer, local_sha):
-  upstream_sha = reviewer.get_cherry_pick_sha_from_local_sha(local_sha)
-  upstream_patch = reviewer.get_commit_from_sha(upstream_sha)
+  local_sha = CommitRef(sha=local_sha)
+  upstream_sha = reviewer.get_cherry_pick_sha_from_local_sha(local_sha.sha)
+  upstream_patch = reviewer.get_commit_from_sha(CommitRef(sha=upstream_sha))
   local_patch = reviewer.get_commit_from_sha(local_sha)
   result = reviewer.compare_diffs(upstream_patch, local_patch)
 
   if reviewer.verbose or reviewer.chatty or len(result):
-    logger.info('Reviewing %s (rmt=%s)' % (local_sha, upstream_sha[:11]))
+    logger.info('Reviewing %s (rmt=%s)' % (local_sha.sha, upstream_sha[:11]))
 
   for l in result:
     logger.info(l)
