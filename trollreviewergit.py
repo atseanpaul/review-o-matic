@@ -98,7 +98,8 @@ class GitChangeReviewer(ChangeReviewer):
     for l in fixes_ref.splitlines():
       msg += self.strings.FIXES_REF_LINE.format(l)
     msg += self.strings.FIXES_REF_FOOTER
-    self.review_result.add_review(ReviewType.FIXES_REF, msg, notify=True)
+    self.review_result.add_review(ReviewType.FIXES_REF, msg, notify=True,
+                                  ignore_positive_votes=True)
 
   def add_altered_upstream_review(self):
     msg = self.strings.DIFFERS_HEADER

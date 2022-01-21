@@ -29,6 +29,7 @@ class ReviewResult(object):
     self.change = change
     self.strings = strings
     self.vote = 0
+    self.ignore_positive_votes = False
     self.notify = False
     self.dry_run = dry_run
     self.issues = {}
@@ -36,14 +37,20 @@ class ReviewResult(object):
     self.web_link = None
     self.inline_comments = {}
 
-  def add_review(self, review_type, msg, vote=0, notify=False, dry_run=False):
-    # Take the lowest negative, or the highest positive
-    if vote < 0 or self.vote < 0:
-      self.vote = min(self.vote, vote)
-    elif vote > 0 or self.vote > 0:
-      self.vote = max(self.vote, vote)
-    else:
-      self.vote = vote
+  def add_review(self, review_type, msg, vote=0, notify=False, dry_run=False,
+                 ignore_positive_votes=False):
+    if ignore_positive_votes:
+      self.ignore_positive_votes = True
+      self.vote = 0 if self.vote > 0 else self.vote
+
+    if vote <= 0 or not self.ignore_positive_votes:
+      # Take the lowest negative, or the highest positive
+      if vote < 0 or self.vote < 0:
+        self.vote = min(self.vote, vote)
+      elif vote > 0 or self.vote > 0:
+        self.vote = max(self.vote, vote)
+      else:
+        self.vote = vote
 
     if vote < 0:
       self.issues[review_type] = msg

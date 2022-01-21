@@ -108,8 +108,9 @@ This is expected, and this message is posted to make reviewing backports easier.
 '''
   FOUND_FIXES_REF_HEADER='''
  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- !! NOTE: This patch has been referenced in the Fixes: tag of another commit. If
- !!       you haven't already, consider backporting the following patch[es]:'''
+ !! NOTE: This patch has been referenced in the Fixes: tag of another commit. As
+ !!       such, manual review of this patch is required. If you haven't already,
+ !!       consider backporting the following patch[es]:'''
   FIXES_REF_LINE='''
  !!  {}'''
   FIXES_REF_FOOTER='''
