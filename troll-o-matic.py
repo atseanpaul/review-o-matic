@@ -26,7 +26,7 @@ logger = logging.getLogger('rom')
 logger.setLevel(logging.DEBUG) # leave this to handlers
 
 class Troll(object):
-  RETRY_REVIEW_KEY='!!retry-bot-review!!'
+  RETRY_REVIEW_KEY='retry-bot-review'
 
   def __init__(self, config):
     self.config = config
@@ -87,27 +87,22 @@ class Troll(object):
 
     force_review = self.config.force_cl or self.config.force_all
 
-    last_review = None
-    retry_request = None
+    # Look for a retry request in the topic
+    retry_request = False
+    topic_list = c.topic.split() if c.topic else None
+    if topic_list and self.RETRY_REVIEW_KEY in topic_list:
+      retry_request = True
+      force_review = True
+      logger.error('Received retry request on change {} (topic={})'.format(
+                   c.url(), c.topic))
+
     # Look for prior reviews and retry requests
+    last_review = None
     for m in c.get_messages():
       if not m.revision_num == c.current_revision.number:
         continue
       if m.tag == self.tag:
         last_review = m
-      elif self.RETRY_REVIEW_KEY in m.message:
-        retry_request = m
-      else:
-        for comment in m.comments:
-          if self.RETRY_REVIEW_KEY in comment.message:
-            retry_request = m
-            break
-
-    # Received a retry request
-    if (retry_request and
-        (not last_review or retry_request.date > last_review.date)):
-      logger.error('Received retry request on change {}'.format(c.url()))
-      force_review = True
 
     age_days = None
     if not force_review and last_review:
@@ -138,6 +133,15 @@ class Troll(object):
                                         self.config.gerrit_msg_limit,
                                         self.config.dry_run,
                                         self.config.verbose)
+
+    # Clear the retry request from the topic
+    if retry_request:
+      topic_list.remove(self.RETRY_REVIEW_KEY)
+      c.topic = ' '.join(topic_list)
+      if not self.gerrit.set_topic(c):
+        logger.error('ERROR: Failed to clear retry request from change')
+        return None
+
     if not reviewer:
       self.add_change_to_ignore_list(c)
       return None

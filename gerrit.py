@@ -77,6 +77,7 @@ class GerritChange(object):
     self.last_updated = parse_gerrit_timestamp(rest['updated'])
     self.status = rest['status']
     self.subject = rest['subject']
+    self.topic = rest.get('topic')
     self.project = rest['project']
     self.branch = rest['branch']
     self.current_revision = GerritRevision(
@@ -91,6 +92,7 @@ class GerritChange(object):
     for m in rest['messages']:
       msg = GerritMessage(m)
       self.messages[msg.id] = msg
+
 
     self.vote_code_review = []
     self.__parse_votes(rest, self.vote_code_review, 'Code-Review')
@@ -262,6 +264,18 @@ class Gerrit(object):
   def get_messages(self, change):
     uri = '/changes/{}/messages'.format(change.id)
     return self.rest.get(uri, timeout=self.timeout)
+
+  def set_topic(self, change):
+    # https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#set-topic
+    uri = '/changes/{}/topic'.format(change.id)
+    options = {
+        'topic': change.topic
+    }
+    try:
+      self.rest.put(uri, data=options, timeout=self.timeout)
+      return True
+    except requests.exceptions.HTTPError:
+      return False
 
   def remove_reviewer(self, change):
     uri = '/changes/{}/reviewers/self/delete'.format(change.id)

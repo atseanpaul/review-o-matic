@@ -17,8 +17,8 @@ The following issues were found with your patch:
 >>>>>>> Want to retry?
 
 If you suspect the issue(s) found are a result of a bug in this review script
-as opposed to your patch, respond with "{}" and the reviewer will
-re-evaluate your change.
+as opposed to your patch, add "{}" to the Topic (space delimited with any existing
+Topic) and the reviewer will re-evaluate your change.
 '''
   SUCCESS='''
 No changes have been detected between this change and its upstream source!
