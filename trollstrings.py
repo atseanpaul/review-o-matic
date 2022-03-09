@@ -17,8 +17,10 @@ The following issues were found with your patch:
 >>>>>>> Want to retry?
 
 If you suspect the issue(s) found are a result of a bug in this review script
-as opposed to your patch, add "{}" to the Topic (space delimited with any existing
+as opposed to your patch, add "{}" to the Topic [1] (space delimited with any existing
 Topic) and the reviewer will re-evaluate your change.
+
+[1] https://gerrit-review.googlesource.com/Documentation/images/cross-repository-changes-add-topic.png
 '''
   SUCCESS='''
 No changes have been detected between this change and its upstream source!
