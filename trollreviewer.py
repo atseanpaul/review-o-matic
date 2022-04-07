@@ -1,3 +1,4 @@
+from exceptions import GerritFetchError
 from trollreview import ReviewType
 
 import logging
@@ -80,8 +81,8 @@ class ChangeReviewer(object):
         return True
       except:
         continue
-    raise ValueError('ERROR: Could not get gerrit patch {}\n'.format(
-                                                      self.change))
+    raise GerritFetchError('ERROR: Could not get gerrit patch {}\n'.format(
+                            self.change))
 
   def get_upstream_patch(self):
     raise NotImplementedError()

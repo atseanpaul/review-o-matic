@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-from reviewer import Reviewer
+from exceptions import GerritFetchError
 from gerrit import Gerrit, GerritRevision, GerritMessage
+from reviewer import Reviewer
 
 from trollconfig import TrollConfig
 from trollreview import ReviewType
@@ -172,11 +173,15 @@ class Troll(object):
         if result:
           self.do_review(project, c, result)
           ret += 1
+        self.add_change_to_ignore_list(c)
+      except GerritFetchError as e:
+        logger.error('Gerrit fetch failed, will retry, {}'.format(c.url()))
+        logger.exception('Exception: {}'.format(e))
+        # Don't add change to ignore list, we want to retry next time
       except Exception as e:
         logger.error('Exception processing change {}'.format(c.url()))
         logger.exception('Exception: {}'.format(e))
-
-      self.add_change_to_ignore_list(c)
+        self.add_change_to_ignore_list(c)
 
     return ret
 

@@ -1,0 +1,2 @@
+class GerritFetchError(Exception):
+  pass
