@@ -34,8 +34,8 @@ class ChangeReviewer(object):
     return True
 
   def format_diff(self):
-    # Leave room for boilerplate and other review feedback, 2k chars for now
-    max_size = self.msg_limit - 2048
+    # Leave room for boilerplate and other review feedback, 4k chars for now
+    max_size = self.msg_limit - 4096
     msg = ''
     for l in self.diff:
       msg += '  {}\n'.format(l)
