@@ -45,6 +45,8 @@ class TrollConfig(object):
     self.parse_projects()
 
   def parse_globals(self):
+    self.netrc = self.config.get('global', 'NetRCReview', fallback=None)
+    self.netrc_admin = self.config.get('global', 'NetRCAdmin', fallback=None)
     self.gerrit_url = self.config.get('global', 'GerritUrl')
     self.gerrit_msg_limit = self.config.getint('global', 'GerritMsgLimit')
     self.stats_file = self.config.get('global', 'StatsFile', fallback=None)

@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import logging
 from logging import handlers
+import os
 from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
 import pprint
 import requests
@@ -14,14 +15,27 @@ def parse_gerrit_timestamp(ts):
   return datetime.strptime(ts[:-10], '%Y-%m-%d %H:%M:%S')
 
 class AuthFromNetrc(HTTPBasicAuthFromNetrc):
-  def __init__(self, url, use_internal):
+  def __init__(self, netrc, url, use_internal):
     # This is a nasty little hack, that is probably going to be forgotten the
     # next time my .netrc file goes away. If we want an "internal" login,
     # append '.internal' to the host of the internal login in your .netrc file
     if use_internal:
       parsed = urllib.parse.urlsplit(url)
       url = parsed.scheme + '://' + parsed.netloc + '.internal' + parsed.path
-    super().__init__(url)
+
+    try:
+        old_netrc = os.environ.get('NETRC')
+        override_netrc = netrc and os.path.exists(netrc)
+        if override_netrc:
+            logger.debug('Using netrc={}'.format(netrc))
+            os.environ['NETRC'] = netrc
+
+        super().__init__(url)
+    finally:
+        if override_netrc:
+            os.environ.pop('NETRC')
+            if old_netrc:
+                os.environ['NETRC'] = old_netrc
 
 class GerritMessage(object):
   def __init__(self, rest):
@@ -156,8 +170,8 @@ class GerritChange(object):
     return
 
 class Gerrit(object):
-  def __init__(self, url, use_internal=False):
-    auth = AuthFromNetrc(url, use_internal)
+  def __init__(self, url, netrc=None, use_internal=False):
+    auth = AuthFromNetrc(netrc, url, use_internal)
     self.timeout = 90
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
