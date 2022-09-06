@@ -221,7 +221,7 @@ class Reviewer(object):
     run_cmd = self.git_cmd + cmd
     logger.debug('GIT: {}'.format(' '.join(run_cmd)))
     if call_type == CallType.CHECK_OUTPUT:
-      return subprocess.check_output(run_cmd, stderr=stderr).decode('UTF-8')
+      return subprocess.check_output(run_cmd, stderr=stderr).decode('UTF-8', errors='replace')
     elif call_type == CallType.CHECK_CALL:
       try:
         subprocess.check_call(run_cmd, stdout=stdout, stderr=stderr)

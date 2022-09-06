@@ -79,7 +79,8 @@ class ChangeReviewer(object):
                                   self.project.gerrit_remote_name,
                                   self.change.current_revision.ref)
         return True
-      except:
+      except BaseException as e:
+        logger.error(f'ERROR: Failed to get commit from remote: ({e})')
         continue
     raise GerritFetchError('ERROR: Could not get gerrit patch {}\n'.format(
                             self.change))
