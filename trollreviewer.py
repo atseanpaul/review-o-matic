@@ -38,14 +38,16 @@ class ChangeReviewer(object):
     max_size = self.msg_limit - 4096
     msg = ''
     for l in self.diff:
-      msg += '  {}\n'.format(l)
+      msg += '{}\n'.format(l)
 
     if len(msg) > max_size:
-      trunc_msg = '\n\n  !!!! Diff truncated !!!!'
+      trunc_msg = '\n\n!!!! Diff truncated !!!!'
       msg = msg[:(max_size - len(trunc_msg))]
       msg += trunc_msg
 
-    return msg
+    # Surround the diff block in triple-backtips to ensure that it gets monospace font
+    # and not formatted as markdown.
+    return '```\n' + msg + '\n```'
 
   def add_successful_review(self):
     msg = self.strings.SUCCESS.format(random.choice(self.strings.SWAG))
