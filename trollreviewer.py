@@ -37,8 +37,9 @@ class ChangeReviewer(object):
     # Leave room for boilerplate and other review feedback, 4k chars for now
     max_size = self.msg_limit - 4096
     msg = ''
+    # Indent with 4 spaces to ensure diff is code formatted, per markdown spec.
     for l in self.diff:
-      msg += '  {}\n'.format(l)
+      msg += '    {}\n'.format(l)
 
     if len(msg) > max_size:
       trunc_msg = '\n\n  !!!! Diff truncated !!!!'
