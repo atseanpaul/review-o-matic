@@ -3,7 +3,7 @@ import json
 import logging
 from logging import handlers
 import os
-from pygerrit2 import GerritRestAPI, HTTPBasicAuthFromNetrc
+from pygerrit2 import GerritRestAPI, Anonymous, HTTPBasicAuthFromNetrc
 import pprint
 import requests
 import urllib
@@ -171,7 +171,11 @@ class GerritChange(object):
 
 class Gerrit(object):
   def __init__(self, url, netrc=None, use_internal=False):
-    auth = AuthFromNetrc(netrc, url, use_internal)
+    if netrc:
+      auth = AuthFromNetrc(netrc, url, use_internal)
+    else:
+      logger.debug('No netrc specified. Using Gerrit anonymously.')
+      auth = Anonymous()
     self.timeout = 90
     self.rest = GerritRestAPI(url=url, auth=auth)
     self.url = url
