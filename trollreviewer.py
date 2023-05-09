@@ -75,6 +75,10 @@ class ChangeReviewer(object):
                                   notify=True)
 
   def get_gerrit_patch(self):
+
+    if self.gerrit_patch:
+      return
+
     for i in range(0, 4):
       try:
         self.gerrit_patch = self.reviewer.get_commit_from_remote(

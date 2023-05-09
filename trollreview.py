@@ -83,7 +83,8 @@ class ReviewResult(object):
         msg += self.strings.ISSUE_SEPARATOR.format(j + 1)
       msg += i
 
-    msg += self.strings.FOUND_ISSUES_RETRY.format(retry_key)
+    if retry_key:
+        msg += self.strings.FOUND_ISSUES_RETRY.format(retry_key)
 
     return msg
 

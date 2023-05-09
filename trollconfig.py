@@ -32,14 +32,18 @@ TrollConfigPatchwork = collections.namedtuple('TrollConfigPatchwork',
                                               ])
 
 class TrollConfig(object):
-  def __init__(self):
-    self.parse_cmdline()
+  def __init__(self, config_file=None):
+    if not config_file:
+      self.parse_cmdline()
 
-    if self.force_all:
-      self.dry_run = True
+      if self.force_all:
+        self.dry_run = True
+      config_file = self.config_file
+    else:
+      self.force_prefix = None
 
     self.config = configparser.ConfigParser()
-    self.config.read(self.config_file)
+    self.config.read(config_file)
 
     self.parse_globals()
     self.parse_projects()
